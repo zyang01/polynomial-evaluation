@@ -1,10 +1,13 @@
-mod pepu;
+mod pem;
 
-use pepu::Instruction;
+use pem::Instruction;
 
 fn main() {
     let instructions = program();
     println!("Instructions: {:#?}", instructions);
+
+    let p2_instructions = program2();
+    println!("Instructions: {:#?}", p2_instructions);
 }
 
 fn program() -> Vec<Instruction> {
@@ -19,4 +22,8 @@ fn program() -> Vec<Instruction> {
         Instruction::new(),
         Instruction::new().with_mul(0, 0, 2),
     ]
+}
+
+fn program2() -> Vec<Instruction> {
+    vec![Instruction::new().with_sub(0, 0, 0).with_str(0, 0)]
 }

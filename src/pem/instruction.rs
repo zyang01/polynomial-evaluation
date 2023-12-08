@@ -1,13 +1,4 @@
-//! Polynomial Evaluation Processing Unit (PEPU)
-
-/// Register ID in range 0..=7
-pub(crate) type Reg = u32;
-
-/// Memory address in range 0..2^32
-type Addr = u32;
-
-/// PEPU constant
-type Const = u32;
+use super::types::{Addr, Const, Reg};
 
 #[derive(Debug)]
 pub(crate) struct Instruction {
@@ -29,7 +20,7 @@ pub(crate) struct Instruction {
 }
 
 impl Instruction {
-    /// Create an empty instruction
+    /// Create an empty `Instruction`
     pub fn new() -> Self {
         Self {
             ldi: None,
