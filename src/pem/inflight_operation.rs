@@ -245,6 +245,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_operation_output_equality() {
+        let op1 = OperationOutput::WriteToRegister(Reg(0), Value("1".to_string()));
+        let op2 = OperationOutput::WriteToRegister(Reg(0), Value("2".to_string()));
+        let op3 = OperationOutput::WriteToMemory(Addr(0), Value("3".to_string()));
+        let op4 = OperationOutput::WriteToMemory(Addr(0), Value("3".to_string()));
+
+        assert_eq!(op1, op1);
+        assert_eq!(op1, op2);
+        assert_ne!(op1, op3);
+        assert_ne!(op1, op4);
+
+        assert_eq!(op2, op2);
+        assert_ne!(op2, op3);
+        assert_ne!(op2, op4);
+
+        assert_eq!(op3, op3);
+        assert_eq!(op3, op4);
+
+        assert_eq!(op4, op4);
+    }
+
+    #[test]
     fn test_inflight_operation_ordering() {
         let ldi = InflightOperation::from_ldi(0, Reg(0), Const(1));
         let ldr = InflightOperation::from_ldr(0, Reg(0), Value("1".to_string()));
