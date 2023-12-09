@@ -19,7 +19,7 @@ pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, Value> {
 
     let mut memory = HashMap::new();
     for (num, line) in read_to_string(filepath)
-        .unwrap_or_else(|_| panic!("Unable to read startup memory from {filepath}"))
+        .unwrap_or_else(|e| panic!("Unable to read startup memory from `{filepath}`: {e}"))
         .lines()
         .enumerate()
         .map(|(num, line)| (num + 1, line))
@@ -27,13 +27,13 @@ pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, Value> {
         let mut split = line.splitn(2, ' ');
         let addr = split
             .next()
-            .unwrap_or_else(|| panic!("No address on line {num}"));
+            .unwrap_or_else(|| panic!("No memory address on line {num}"));
         let value = split
             .next()
             .unwrap_or_else(|| panic!("No value on line {num}"));
         let addr = Addr(
             addr.parse::<u32>()
-                .unwrap_or_else(|_| panic!("Invalid address on line {num}: {addr}")),
+                .unwrap_or_else(|e| panic!("Invalid memory address {addr} on line {num}: {e}")),
         );
         let value = Value(value.to_string());
         memory.insert(addr, value);
@@ -60,7 +60,7 @@ pub(crate) fn read_program(filepath: &str) -> Vec<Instruction> {
     let mut curr_inst: Option<Instruction> = None;
 
     for (num, line) in read_to_string(filepath)
-        .unwrap_or_else(|_| panic!("Unable to read program from {filepath}"))
+        .unwrap_or_else(|e| panic!("Unable to read program from `{filepath}`: {e}"))
         .lines()
         .enumerate()
         .map(|(num, line)| (num + 1, line))
@@ -70,18 +70,18 @@ pub(crate) fn read_program(filepath: &str) -> Vec<Instruction> {
         let mut split = line.split(' ');
         let op = split
             .next()
-            .unwrap_or_else(|| panic!("No instruction on line {num}"));
+            .unwrap_or_else(|| panic!("No operation on line {num}"));
 
         match op {
             "ldi" => {
                 if let (Some(dst), Some(constant), None) =
                     (split.next(), split.next(), split.next())
                 {
-                    let dst = dst
-                        .parse::<u32>()
-                        .unwrap_or_else(|_| panic!("Invalid {op} register on line {num}: {dst}"));
-                    let constant = constant.parse::<u32>().unwrap_or_else(|_| {
-                        panic!("Invalid {op} constant on line {num}: {constant}")
+                    let dst = dst.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} register {dst} on line {num}: {e}")
+                    });
+                    let constant = constant.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} constant {constant} on line {num}: {e}")
                     });
                     curr_inst = curr_inst.map(|inst| inst.with_ldi(Reg(dst), Const(constant)));
                 } else {
@@ -90,12 +90,12 @@ pub(crate) fn read_program(filepath: &str) -> Vec<Instruction> {
             }
             "ldr" | "str" => {
                 if let (Some(reg), Some(addr), None) = (split.next(), split.next(), split.next()) {
-                    let reg = reg
-                        .parse::<u32>()
-                        .unwrap_or_else(|_| panic!("Invalid {op} register on line {num}: {reg}"));
-                    let addr = addr
-                        .parse::<u32>()
-                        .unwrap_or_else(|_| panic!("Invalid {op} address on line {num}: {addr}"));
+                    let reg = reg.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} register {reg} on line {num}: {e}")
+                    });
+                    let addr = addr.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} memory address {addr} on line {num}: {e}")
+                    });
 
                     match op {
                         "ldr" => {
@@ -114,15 +114,15 @@ pub(crate) fn read_program(filepath: &str) -> Vec<Instruction> {
                 if let (Some(dst), Some(src1), Some(src2), None) =
                     (split.next(), split.next(), split.next(), split.next())
                 {
-                    let dst = dst
-                        .parse::<u32>()
-                        .unwrap_or_else(|_| panic!("Invalid {op} register on line {num}: {dst}"));
-                    let src1 = src1
-                        .parse::<u32>()
-                        .unwrap_or_else(|_| panic!("Invalid {op} register on line {num}: {src1}"));
-                    let src2 = src2
-                        .parse::<u32>()
-                        .unwrap_or_else(|_| panic!("Invalid {op} register on line {num}: {src2}"));
+                    let dst = dst.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} register {dst} on line {num}: {e}")
+                    });
+                    let src1 = src1.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} register {src1} on line {num}: {e}")
+                    });
+                    let src2 = src2.parse::<u32>().unwrap_or_else(|e| {
+                        panic!("Invalid {op} register {src2} on line {num}: {e}")
+                    });
 
                     match op {
                         "add" => {
@@ -148,7 +148,7 @@ pub(crate) fn read_program(filepath: &str) -> Vec<Instruction> {
                 curr_inst = None
             }
             "#" => continue,
-            _ => panic!("Invalid instruction on line {num}: {op}"),
+            _ => panic!("Invalid operation on line {num}: `{op}`"),
         }
     }
 
