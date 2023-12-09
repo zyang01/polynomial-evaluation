@@ -1,5 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
 
+use log::{debug, trace};
 use thiserror::Error;
 
 use super::{
@@ -76,15 +77,16 @@ impl Machine {
         }
 
         for instruction in program {
+            debug!("Executing instruction #{}: {}", self.pc, instruction);
             self.begin_execution(instruction)?;
-            self.pc += 1;
             self.end_cycle()?;
         }
 
         while self.pending_operations.peek().is_some() {
-            self.pc += 1;
             self.end_cycle()?;
         }
+
+        debug!("All instructions executed");
 
         self.get_register_value(Reg(0))
     }
@@ -120,7 +122,15 @@ impl Machine {
             .ok_or(ComputeError::InvalidRegister { reg, pc: self.pc })?
             .as_ref()
             .ok_or(ComputeError::UninitializedRegister { reg, pc: self.pc })
-            .map(|v| v.clone())
+            .map(|v| {
+                trace!(
+                    "Register {} accessed with value {} at cycle {}",
+                    reg,
+                    v.0,
+                    self.pc
+                );
+                v.clone()
+            })
     }
 
     /// Get the value of a memory address
@@ -139,7 +149,15 @@ impl Machine {
                 addr: *addr,
                 pc: self.pc,
             })
-            .map(|v| v.clone())
+            .map(|v| {
+                trace!(
+                    "Memory address {} accessed with value {} at cycle {}",
+                    addr,
+                    v.0,
+                    self.pc
+                );
+                v.clone()
+            })
     }
 
     /// Begin execution of an instruction by creating an `InflightOperation`
@@ -224,14 +242,20 @@ impl Machine {
         let mut prev: Option<InflightOperation> = None;
         while let Some(next) = self.pending_operations.peek() {
             let complete_cycle = next.get_complete_cycle();
-            assert!(complete_cycle >= self.pc);
+            assert!(complete_cycle > self.pc);
 
-            if complete_cycle > self.pc {
+            if complete_cycle > self.pc + 1 {
                 break;
             }
 
             let next = self.pending_operations.pop().unwrap();
             let output = next.get_output();
+            debug!(
+                "Operation originated by instruction #{} completed at cycle {}: {:?}",
+                next.get_instruction(),
+                self.pc,
+                output
+            );
             if prev.as_ref().map(|op| op.get_output()) == Some(output) {
                 return Err(match output {
                     OperationOutput::WriteToRegister(reg, _) => ComputeError::RegisterDataRace {
@@ -261,6 +285,8 @@ impl Machine {
             prev = Some(next);
         }
 
+        debug!("Cycle #{} completed", self.pc);
+        self.pc += 1;
         Ok(())
     }
 }
@@ -324,7 +350,7 @@ mod test {
         assert!(machine.compute(&program).is_err_and(|e| e
             == ComputeError::RegisterDataRace {
                 reg: Reg(0),
-                pc: 3,
+                pc: 2,
                 inst1: 1,
                 inst2: 2
             }));

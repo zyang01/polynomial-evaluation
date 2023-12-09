@@ -19,6 +19,40 @@ pub(crate) struct Instruction {
     pub(super) mul: Option<(Reg, Reg, Reg)>,
 }
 
+impl std::fmt::Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{")?;
+
+        if let Some((reg, constant)) = &self.ldi {
+            write!(f, " ldi {} {};", reg, constant)?;
+        }
+
+        if let Some((reg, addr)) = &self.ldr {
+            write!(f, " ldr {} {};", reg, addr)?;
+        }
+
+        if let Some((reg, addr)) = &self.str {
+            write!(f, " str {} {};", reg, addr)?;
+        }
+
+        if let Some((dst, src1, src2)) = &self.add {
+            write!(f, " add {} {} {};", dst, src1, src2)?;
+        }
+
+        if let Some((dst, src1, src2)) = &self.sub {
+            write!(f, " sub {} {} {};", dst, src1, src2)?;
+        }
+
+        if let Some((dst, src1, src2)) = &self.mul {
+            write!(f, " mul {} {} {};", dst, src1, src2)?;
+        }
+
+        write!(f, " }}")?;
+
+        Ok(())
+    }
+}
+
 impl Instruction {
     /// Create an empty `Instruction`
     pub fn new() -> Self {

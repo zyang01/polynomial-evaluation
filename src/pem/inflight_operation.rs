@@ -60,15 +60,15 @@ impl PartialEq for OperationOutput {
 pub(super) struct InflightOperation {
     /// Operation output when it completes
     output: OperationOutput,
-    /// Cycle when the operation completes
-    complete_cycle: usize,
-    /// The instruction that generated this operation
-    instruction: usize,
+    /// Cycle by which the operation completes
+    complete_by: usize,
+    /// The cycle when the operation started
+    started_at: usize,
 }
 
 impl Ord for InflightOperation {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.complete_cycle.cmp(&other.complete_cycle) {
+        match self.complete_by.cmp(&other.complete_by) {
             Ordering::Equal => self.output.cmp(&other.output),
             ordering => ordering.reverse(),
         }
@@ -83,9 +83,9 @@ impl PartialOrd for InflightOperation {
 
 impl PartialEq for InflightOperation {
     fn eq(&self, other: &Self) -> bool {
-        self.complete_cycle == other.complete_cycle
+        self.complete_by == other.complete_by
             && self.output == other.output
-            && self.instruction == other.instruction
+            && self.started_at == other.started_at
     }
 }
 
@@ -99,8 +99,8 @@ impl InflightOperation {
     pub fn from_ldi(cycle: usize, dst: Reg, constant: Const) -> Self {
         Self {
             output: OperationOutput::WriteToRegister(dst, Value(constant.0.to_string())),
-            complete_cycle: cycle + OperationLatency::LDI,
-            instruction: cycle,
+            complete_by: cycle + OperationLatency::LDI,
+            started_at: cycle,
         }
     }
 
@@ -113,8 +113,8 @@ impl InflightOperation {
     pub fn from_ldr(cycle: usize, dst: Reg, addr_value: Value) -> Self {
         Self {
             output: OperationOutput::WriteToRegister(dst, addr_value),
-            complete_cycle: cycle + OperationLatency::LDR,
-            instruction: cycle,
+            complete_by: cycle + OperationLatency::LDR,
+            started_at: cycle,
         }
     }
 
@@ -127,8 +127,8 @@ impl InflightOperation {
     pub fn from_str(cycle: usize, src_value: Value, addr: Addr) -> Self {
         Self {
             output: OperationOutput::WriteToMemory(addr, src_value),
-            complete_cycle: cycle + OperationLatency::STR,
-            instruction: cycle,
+            complete_by: cycle + OperationLatency::STR,
+            started_at: cycle,
         }
     }
 
@@ -146,8 +146,8 @@ impl InflightOperation {
                 dst,
                 Value(format!("({} + {})", src2_value.0, src1_value.0)),
             ),
-            complete_cycle: cycle + OperationLatency::ADD,
-            instruction: cycle,
+            complete_by: cycle + OperationLatency::ADD,
+            started_at: cycle,
         }
     }
 
@@ -165,8 +165,8 @@ impl InflightOperation {
                 dst,
                 Value(format!("({} - {})", src1_value.0, src2_value.0)),
             ),
-            complete_cycle: cycle + OperationLatency::SUB,
-            instruction: cycle,
+            complete_by: cycle + OperationLatency::SUB,
+            started_at: cycle,
         }
     }
 
@@ -184,8 +184,8 @@ impl InflightOperation {
                 dst,
                 Value(format!("({} * {})", src1_value.0, src2_value.0)),
             ),
-            complete_cycle: cycle + OperationLatency::MUL,
-            instruction: cycle,
+            complete_by: cycle + OperationLatency::MUL,
+            started_at: cycle,
         }
     }
 
@@ -194,11 +194,11 @@ impl InflightOperation {
     }
 
     pub fn get_complete_cycle(&self) -> usize {
-        self.complete_cycle
+        self.complete_by
     }
 
     pub fn get_instruction(&self) -> usize {
-        self.instruction
+        self.started_at
     }
 }
 

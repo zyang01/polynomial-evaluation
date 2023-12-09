@@ -1,5 +1,5 @@
-# This program causes a data race when writing to register #1
-# by instruction #1 and #2 at the end of cycle #2 (start of cycle #3).
+# This program causes a data race when writing to register #1 by
+# instructions #1 and #2 at the end of cycle #2.
 ldi 0 1
 ;
 add 1 0 0
