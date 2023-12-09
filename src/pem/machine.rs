@@ -33,14 +33,14 @@ pub enum ComputeError {
     UninitializedRegister { reg: Reg, pc: usize },
     #[error("Accessing uninitialized memory address #{} at instruction #{pc}", .addr.0)]
     UninitializedMemory { addr: Addr, pc: usize },
-    #[error("Register #{} data race detected at cycle #{pc} originated by instructions #{inst1} and #{inst2}", .reg.0)]
+    #[error("Register #{} data race detected at cycle #{pc} from operations originated by instructions #{inst1} and #{inst2}", .reg.0)]
     RegisterDataRace {
         reg: Reg,
         pc: usize,
         inst1: usize,
         inst2: usize,
     },
-    #[error("Memory #{} data race detected at cycle #{pc} originated by instructions #{inst1} and #{inst2}", .addr.0)]
+    #[error("Memory #{} data race detected at cycle #{pc} from operations originated by instructions #{inst1} and #{inst2}", .addr.0)]
     MemoryDataRace {
         addr: Addr,
         pc: usize,
@@ -124,7 +124,7 @@ impl Machine {
             .ok_or(ComputeError::UninitializedRegister { reg, pc: self.pc })
             .map(|v| {
                 trace!(
-                    "Register {} accessed with value {} at cycle {}",
+                    "Register {} accessed with value `{}` at cycle #{}",
                     reg,
                     v.0,
                     self.pc
@@ -151,7 +151,7 @@ impl Machine {
             })
             .map(|v| {
                 trace!(
-                    "Memory address {} accessed with value {} at cycle {}",
+                    "Memory address {} accessed with value `{}` at cycle #{}",
                     addr,
                     v.0,
                     self.pc
@@ -251,7 +251,7 @@ impl Machine {
             let next = self.pending_operations.pop().unwrap();
             let output = next.get_output();
             debug!(
-                "Operation originated by instruction #{} completed at cycle {}: {:?}",
+                "Operation originated by instruction #{} completed at cycle #{}: {:?}",
                 next.get_instruction(),
                 self.pc,
                 output
@@ -276,9 +276,21 @@ impl Machine {
             match output {
                 OperationOutput::WriteToRegister(reg, value) => {
                     self.regs[reg.0 as usize] = Some(value.clone());
+                    trace!(
+                        "Register {} written with value `{}` at cycle #{}",
+                        reg,
+                        value.0,
+                        self.pc
+                    )
                 }
                 OperationOutput::WriteToMemory(addr, value) => {
                     self.mem.insert(*addr, value.clone());
+                    trace!(
+                        "Memory address {} written with value `{}` at cycle #{}",
+                        addr,
+                        value.0,
+                        self.pc
+                    )
                 }
             }
 
@@ -296,6 +308,44 @@ mod test {
     use crate::pem::types::{Const, Reg};
 
     use super::*;
+
+    #[test]
+    fn test_example_program() {
+        let mut machine = Machine::new(HashMap::from_iter(
+            ('A'..='Z')
+                .enumerate()
+                .map(|(i, c)| (Addr(i as u32), Value(c.to_string()))),
+        ));
+        let program = Vec::from([
+            Instruction::new()
+                .with_ldi(Reg(0), Const(1))
+                .with_ldr(Reg(1), Addr(0)),
+            Instruction::new()
+                .with_ldi(Reg(2), Const(2))
+                .with_ldr(Reg(3), Addr(1)),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new().with_add(Reg(0), Reg(0), Reg(1)),
+            Instruction::new().with_add(Reg(2), Reg(2), Reg(3)),
+            Instruction::new(),
+            Instruction::new().with_mul(Reg(0), Reg(0), Reg(2)),
+        ]);
+        assert_eq!(
+            machine.compute(&program).map(|v| v.0),
+            Ok("((A + 1) * (B + 2))".to_string())
+        );
+        assert_eq!(machine.pc, 18);
+    }
+
+    #[test]
+    fn test_uninitialized_0_register() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::new();
+        assert!(machine
+            .compute(&program)
+            .is_err_and(|e| e == ComputeError::UninitializedRegister { reg: Reg(0), pc: 0 }));
+    }
 
     #[test]
     fn test_terminated() {
@@ -344,12 +394,12 @@ mod test {
         let mut machine = Machine::new(HashMap::new());
         let program = Vec::from([
             Instruction::new().with_ldi(Reg(0), Const(1)),
-            Instruction::new().with_add(Reg(0), Reg(0), Reg(0)),
-            Instruction::new().with_ldi(Reg(0), Const(3)),
+            Instruction::new().with_add(Reg(1), Reg(0), Reg(0)),
+            Instruction::new().with_ldi(Reg(1), Const(3)),
         ]);
         assert!(machine.compute(&program).is_err_and(|e| e
             == ComputeError::RegisterDataRace {
-                reg: Reg(0),
+                reg: Reg(1),
                 pc: 2,
                 inst1: 1,
                 inst2: 2
