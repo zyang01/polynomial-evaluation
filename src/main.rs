@@ -1,10 +1,10 @@
-mod pem;
-
 use std::collections::HashMap;
 
-use pem::{types::Value, Instruction, Machine};
-
-use crate::pem::types::{Addr, Const, Reg};
+mod pem;
+use pem::{
+    types::{Addr, Const, Reg, Value},
+    Instruction, Machine,
+};
 
 fn main() {
     let mut machine = init_machine();

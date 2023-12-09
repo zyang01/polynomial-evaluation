@@ -7,6 +7,7 @@ mod machine;
 pub(crate) use instruction::Instruction;
 pub(crate) use machine::Machine;
 
+/// PEM primitive types
 pub(crate) mod types {
     /// Register ID in range 0..=7
     #[derive(Debug, Clone, Copy)]
