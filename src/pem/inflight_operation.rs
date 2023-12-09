@@ -57,6 +57,8 @@ pub(super) struct InflightOperation {
     output: OperationOutput,
     /// Cycle when the operation completes
     complete_cycle: usize,
+    /// The instruction that generated this operation
+    instruction: usize,
 }
 
 impl Ord for InflightOperation {
@@ -91,6 +93,7 @@ impl InflightOperation {
         Self {
             output: OperationOutput::WriteToRegister(dst, Value(constant.0.to_string())),
             complete_cycle: cycle + OperationLatency::LDI,
+            instruction: cycle,
         }
     }
 
@@ -104,6 +107,7 @@ impl InflightOperation {
         Self {
             output: OperationOutput::WriteToRegister(dst, addr_value),
             complete_cycle: cycle + OperationLatency::LDR,
+            instruction: cycle,
         }
     }
 
@@ -117,6 +121,7 @@ impl InflightOperation {
         Self {
             output: OperationOutput::WriteToMemory(addr, src_value),
             complete_cycle: cycle + OperationLatency::STR,
+            instruction: cycle,
         }
     }
 
@@ -132,9 +137,10 @@ impl InflightOperation {
         Self {
             output: OperationOutput::WriteToRegister(
                 dst,
-                Value(format!("({} + {})", src1_value.0, src2_value.0)),
+                Value(format!("({} + {})", src2_value.0, src1_value.0)),
             ),
             complete_cycle: cycle + OperationLatency::ADD,
+            instruction: cycle,
         }
     }
 
@@ -153,6 +159,7 @@ impl InflightOperation {
                 Value(format!("({} - {})", src1_value.0, src2_value.0)),
             ),
             complete_cycle: cycle + OperationLatency::SUB,
+            instruction: cycle,
         }
     }
 
@@ -171,6 +178,19 @@ impl InflightOperation {
                 Value(format!("({} * {})", src1_value.0, src2_value.0)),
             ),
             complete_cycle: cycle + OperationLatency::MUL,
+            instruction: cycle,
         }
+    }
+
+    pub fn get_output(&self) -> &OperationOutput {
+        &self.output
+    }
+
+    pub fn get_complete_cycle(&self) -> usize {
+        self.complete_cycle
+    }
+
+    pub fn get_instruction(&self) -> usize {
+        self.instruction
     }
 }

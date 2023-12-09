@@ -2,20 +2,30 @@ mod pem;
 
 use std::collections::HashMap;
 
-use pem::{Instruction, Machine};
+use pem::{types::Value, Instruction, Machine};
 
 use crate::pem::types::{Addr, Const, Reg};
 
 fn main() {
-    let mut machine = Machine::new(HashMap::new());
+    let mut machine = init_machine();
     let instructions = program();
     println!("Instructions: {:#?}", instructions);
 
-    let result = machine.compute(&instructions);
-    println!("Result: {:?}", result);
+    match machine.compute(&instructions) {
+        Ok(value) => println!("Result: {}", value.0),
+        Err(e) => println!("Error: {}", e),
+    }
 
-    let p2_instructions = program2();
-    println!("Instructions: {:#?}", p2_instructions);
+    let _p2_instructions = program2();
+    // println!("Instructions: {:#?}", p2_instructions);
+}
+
+fn init_machine() -> Machine {
+    Machine::new(HashMap::from_iter(
+        ('A'..='Z')
+            .enumerate()
+            .map(|(i, c)| (Addr(i as u32), Value(c.to_string()))),
+    ))
 }
 
 fn program() -> Vec<Instruction> {

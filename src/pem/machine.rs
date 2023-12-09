@@ -3,7 +3,7 @@ use std::collections::{BinaryHeap, HashMap};
 use thiserror::Error;
 
 use super::{
-    inflight_operation::InflightOperation,
+    inflight_operation::{InflightOperation, OperationOutput},
     types::{Addr, Reg, Value},
     Instruction,
 };
@@ -31,10 +31,20 @@ pub enum ComputeError {
     UninitializedRegister { reg: Reg, pc: usize },
     #[error("Accessing uninitialized memory address #{} at instruction #{pc}", .addr.0)]
     UninitializedMemory { addr: Addr, pc: usize },
-    #[error("Register #{} data race at cycle #{pc}", .reg.0)]
-    RegisterDataRace { reg: Reg, pc: usize },
-    #[error("Memory address #{} data race at cycle #{pc}", .addr.0)]
-    MemoryDataRace { addr: Addr, pc: usize },
+    #[error("Register #{} data race detected at cycle #{pc} originated by instructions #{inst1} and #{inst2}", .reg.0)]
+    RegisterDataRace {
+        reg: Reg,
+        pc: usize,
+        inst1: usize,
+        inst2: usize,
+    },
+    #[error("Memory #{} data race detected at cycle #{pc} originated by instructions #{inst1} and #{inst2}", .addr.0)]
+    MemoryDataRace {
+        addr: Addr,
+        pc: usize,
+        inst1: usize,
+        inst2: usize,
+    },
 }
 
 impl Machine {
@@ -55,6 +65,10 @@ impl Machine {
     ///
     /// # Arguments
     /// * `program` - a vector of `Instruction`s to compute
+    ///
+    /// # Returns
+    /// * `Ok(value)` if the program terminated successfully
+    /// * `Err(ComputeError)` if the program terminated with an error
     pub fn compute(&mut self, program: &Vec<Instruction>) -> Result<Value, ComputeError> {
         if self.pc != 0 {
             return Err(ComputeError::Terminated);
@@ -66,7 +80,12 @@ impl Machine {
             self.end_cycle()?;
         }
 
-        Err(ComputeError::Terminated)
+        while self.pending_operations.peek().is_some() {
+            self.pc += 1;
+            self.end_cycle()?;
+        }
+
+        self.get_register_value(Reg(0))
     }
 
     /// Validate a register and return it if valid
@@ -122,7 +141,9 @@ impl Machine {
             .map(|v| v.clone())
     }
 
-    /// Begin execution of an instruction
+    /// Begin execution of an instruction by creating an `InflightOperation`
+    /// for each operation in the instruction and reading the values of the
+    /// source registers or memory addresses
     ///
     /// # Arguments
     /// * `instruction` - instruction to execute
@@ -185,7 +206,60 @@ impl Machine {
         Ok(())
     }
 
+    /// End a cycle by writing the output of all completed operations to
+    /// registers or memory
+    ///
+    /// # Returns
+    /// * `Ok(())` if the cycle was successfully ended
+    /// * `Err(ComputeError::RegisterDataRace)` if two operations wrote to the
+    ///  same register
+    /// * `Err(ComputeError::MemoryDataRace)` if two operations wrote to the
+    /// same memory address
+    ///
+    /// # Panics
+    /// * If the `complete_cycle` of an `InflightOperation` is less than the
+    ///  `pc` of the `Machine`
     fn end_cycle(&mut self) -> Result<(), ComputeError> {
+        let mut prev = None;
+        while let Some(next) = self.pending_operations.peek() {
+            let complete_cycle = next.get_complete_cycle();
+            assert!(complete_cycle >= self.pc);
+
+            if complete_cycle > self.pc {
+                break;
+            }
+
+            let next = self.pending_operations.pop().unwrap();
+            let output = next.get_output();
+            if prev.as_ref() == Some(&next) {
+                return Err(match output {
+                    OperationOutput::WriteToRegister(reg, _) => ComputeError::RegisterDataRace {
+                        reg: *reg,
+                        pc: self.pc,
+                        inst1: prev.unwrap().get_instruction(),
+                        inst2: next.get_instruction(),
+                    },
+                    OperationOutput::WriteToMemory(addr, _) => ComputeError::MemoryDataRace {
+                        addr: *addr,
+                        pc: self.pc,
+                        inst1: prev.unwrap().get_instruction(),
+                        inst2: next.get_instruction(),
+                    },
+                });
+            }
+
+            match output {
+                OperationOutput::WriteToRegister(reg, value) => {
+                    self.regs[reg.0 as usize] = Some(value.clone());
+                }
+                OperationOutput::WriteToMemory(addr, value) => {
+                    self.mem.insert(*addr, value.clone());
+                }
+            }
+
+            prev = Some(next);
+        }
+
         Ok(())
     }
 }
