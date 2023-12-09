@@ -2,21 +2,21 @@ use super::types::{Addr, Const, Reg};
 
 #[derive(Debug)]
 pub(crate) struct Instruction {
-    // ldi <reg> <const> - load a 32-bit numeric constant into a register
-    ldi: Option<(Reg, Const)>,
-    // ldr <reg> <addr> - load value from memory into a register
-    ldr: Option<(Reg, Addr)>,
-    // str <Reg> <Addr> - store a value from register into memory
-    str: Option<(Reg, Addr)>,
-    // add <dst> <src1> <src2> - add the values in the source registers and put the sum in the
-    // destination register
-    add: Option<(Reg, Reg, Reg)>,
-    // sub <dst> <src1> <src2> - subtract the value of source register 2 from source register 1 and
-    // put the difference in the destination register
-    sub: Option<(Reg, Reg, Reg)>,
-    // mul <dst> <src1> <src2> - multiply the values in the source registers and put the product in
-    // the destination register
-    mul: Option<(Reg, Reg, Reg)>,
+    /// ldi <reg> <const> - load a 32-bit numeric constant into a register
+    pub(super) ldi: Option<(Reg, Const)>,
+    /// ldr <reg> <addr> - load value from memory into a register
+    pub(super) ldr: Option<(Reg, Addr)>,
+    /// str <Reg> <Addr> - store a value from register into memory
+    pub(super) str: Option<(Reg, Addr)>,
+    /// add <dst> <src1> <src2> - add the values in the source registers and put
+    /// the sum in the destination register
+    pub(super) add: Option<(Reg, Reg, Reg)>,
+    /// sub <dst> <src1> <src2> - subtract the value of source register 2 from
+    /// source register 1 and put the difference in the destination register
+    pub(super) sub: Option<(Reg, Reg, Reg)>,
+    /// mul <dst> <src1> <src2> - multiply the values in the source registers
+    /// and put the product in the destination register
+    pub(super) mul: Option<(Reg, Reg, Reg)>,
 }
 
 impl Instruction {
@@ -62,8 +62,8 @@ impl Instruction {
         self
     }
 
-    /// Set `add` instruction to add the values in the source registers and put the sum in the
-    /// destination register
+    /// Set `add` instruction to add the values in the source registers and put
+    /// the sum in the destination register
     ///
     /// # Arguments
     /// * `dst` - destination register
@@ -74,8 +74,8 @@ impl Instruction {
         self
     }
 
-    /// Set `sub` instruction to subtract the value of source register 2 from source register 1 and
-    /// put the difference in the destination register
+    /// Set `sub` instruction to subtract the value of source register 2 from
+    /// source register 1 and put the difference in the destination register
     ///
     /// # Arguments
     /// * `dst` - destination register
@@ -86,8 +86,8 @@ impl Instruction {
         self
     }
 
-    /// Set `mul` instruction to multiply the values in the source registers and put the product in
-    /// the destination register
+    /// Set `mul` instruction to multiply the values in the source registers and
+    /// put the product in the destination register
     ///
     /// # Arguments
     /// * `dst` - destination register
