@@ -1,63 +1,29 @@
-use std::collections::HashMap;
+use log::{debug, error, info};
 
+mod parser;
 mod pem;
-use log::{error, info};
-use pem::{
-    types::{Addr, Const, Reg, Value},
-    Instruction, Machine,
-};
+
+use pem::Machine;
 
 fn main() {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .format_timestamp_micros()
+        .init();
 
-    let mut machine = init_machine();
-    let _example_prog = example_program();
-    let _register_data_race_prog = register_data_race_program();
-    let _place_holder_prog = place_holder_program();
+    let program_filepath = std::env::args().nth(1).unwrap_or_else(|| {
+        debug!("No program file specified, defaulting to `./example_program.txt`");
+        "./example_program.txt".to_string()
+    });
+    let program = parser::read_program(&program_filepath);
 
-    match machine.compute(&_register_data_race_prog) {
+    let startup_memory_filepath = std::env::args().nth(2).unwrap_or_else(|| {
+        debug!("No startup memory file specified, defaulting to `./startup_memory.txt`");
+        "./startup_memory.txt".to_string()
+    });
+    let mut machine = Machine::new(parser::read_startup_memory(&startup_memory_filepath));
+
+    match machine.compute(&program) {
         Ok(value) => info!("Result: {}", value.0),
         Err(e) => error!("Error: {}", e),
     }
-}
-
-fn init_machine() -> Machine {
-    Machine::new(HashMap::from_iter(
-        ('A'..='Z')
-            .enumerate()
-            .map(|(i, c)| (Addr(i as u32), Value(c.to_string()))),
-    ))
-}
-
-fn place_holder_program() -> Vec<Instruction> {
-    Vec::from([
-        Instruction::new().with_str(Reg(0), Addr(0)),
-        Instruction::new().with_sub(Reg(1), Reg(0), Reg(0)),
-    ])
-}
-
-fn example_program() -> Vec<Instruction> {
-    Vec::from([
-        Instruction::new()
-            .with_ldi(Reg(0), Const(1))
-            .with_ldr(Reg(1), Addr(0)),
-        Instruction::new()
-            .with_ldi(Reg(2), Const(2))
-            .with_ldr(Reg(3), Addr(1)),
-        Instruction::new(),
-        Instruction::new(),
-        Instruction::new(),
-        Instruction::new().with_add(Reg(0), Reg(0), Reg(1)),
-        Instruction::new().with_add(Reg(2), Reg(2), Reg(3)),
-        Instruction::new(),
-        Instruction::new().with_mul(Reg(0), Reg(0), Reg(2)),
-    ])
-}
-
-fn register_data_race_program() -> Vec<Instruction> {
-    Vec::from([
-        Instruction::new().with_ldi(Reg(0), Const(1)),
-        Instruction::new().with_add(Reg(1), Reg(0), Reg(0)),
-        Instruction::new().with_ldi(Reg(1), Const(3)),
-    ])
 }
