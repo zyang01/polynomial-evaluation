@@ -21,6 +21,11 @@ fn main() {
         "./startup_memory.txt".to_string()
     });
     let mut machine = Machine::new(parser::read_startup_memory(&startup_memory_filepath));
+    machine.allow_data_race(
+        std::env::var("ALLOW_DATA_RACE")
+            .map(|s| s == "true")
+            .unwrap_or(false),
+    );
 
     match machine.compute(&program) {
         Ok(value) => info!("Result: {}", value.0),

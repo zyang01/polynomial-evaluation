@@ -1,6 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
 
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use thiserror::Error;
 
 use super::{
@@ -21,6 +21,8 @@ pub(crate) struct Machine {
     pc: usize,
     /// Pending operations
     pending_operations: BinaryHeap<InflightOperation>,
+
+    allow_data_race: bool,
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -60,6 +62,14 @@ impl Machine {
             mem,
             pc: 0,
             pending_operations: BinaryHeap::new(),
+            allow_data_race: false,
+        }
+    }
+
+    pub fn allow_data_race(&mut self, allow: bool) {
+        self.allow_data_race = allow;
+        if allow {
+            warn!("Allowing data races \u{1F648}");
         }
     }
 
@@ -256,8 +266,9 @@ impl Machine {
                 self.pc,
                 output
             );
+
             if prev.as_ref().map(|op| op.get_output()) == Some(output) {
-                return Err(match output {
+                let err = match output {
                     OperationOutput::WriteToRegister(reg, _) => ComputeError::RegisterDataRace {
                         reg: *reg,
                         pc: self.pc,
@@ -270,7 +281,12 @@ impl Machine {
                         inst1: prev.unwrap().get_instruction(),
                         inst2: next.get_instruction(),
                     },
-                });
+                };
+
+                if !self.allow_data_race {
+                    return Err(err);
+                }
+                warn!("{err}");
             }
 
             match output {
