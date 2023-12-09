@@ -1,23 +1,24 @@
 use std::collections::HashMap;
 
 mod pem;
+use log::{error, info};
 use pem::{
     types::{Addr, Const, Reg, Value},
     Instruction, Machine,
 };
 
 fn main() {
+    env_logger::init();
+
     let mut machine = init_machine();
-    let instructions = program();
-    println!("Instructions: {:#?}", instructions);
+    let _example_prog = example_program();
+    let _register_data_race_prog = register_data_race_program();
+    let _place_holder_prog = place_holder_program();
 
-    match machine.compute(&instructions) {
-        Ok(value) => println!("Result: {}", value.0),
-        Err(e) => println!("Error: {}", e),
+    match machine.compute(&_register_data_race_prog) {
+        Ok(value) => info!("Result: {}", value.0),
+        Err(e) => error!("Error: {}", e),
     }
-
-    let _p2_instructions = program2();
-    // println!("Instructions: {:#?}", p2_instructions);
 }
 
 fn init_machine() -> Machine {
@@ -28,7 +29,14 @@ fn init_machine() -> Machine {
     ))
 }
 
-fn program() -> Vec<Instruction> {
+fn place_holder_program() -> Vec<Instruction> {
+    Vec::from([
+        Instruction::new().with_str(Reg(0), Addr(0)),
+        Instruction::new().with_sub(Reg(1), Reg(0), Reg(0)),
+    ])
+}
+
+fn example_program() -> Vec<Instruction> {
     Vec::from([
         Instruction::new()
             .with_ldi(Reg(0), Const(1))
@@ -46,8 +54,10 @@ fn program() -> Vec<Instruction> {
     ])
 }
 
-fn program2() -> Vec<Instruction> {
-    Vec::from([Instruction::new()
-        .with_sub(Reg(0), Reg(0), Reg(0))
-        .with_str(Reg(0), Addr(0))])
+fn register_data_race_program() -> Vec<Instruction> {
+    Vec::from([
+        Instruction::new().with_ldi(Reg(0), Const(1)),
+        Instruction::new().with_add(Reg(1), Reg(0), Reg(0)),
+        Instruction::new().with_ldi(Reg(1), Const(3)),
+    ])
 }

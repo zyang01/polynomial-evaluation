@@ -10,7 +10,7 @@ pub(crate) use machine::Machine;
 /// PEM primitive types
 pub(crate) mod types {
     /// Register ID in range 0..=7
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     pub struct Reg(pub u32);
 
     /// Memory address in range 0..2^32

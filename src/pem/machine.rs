@@ -18,10 +18,11 @@ pub(crate) struct Machine {
     mem: HashMap<Addr, Value>,
     /// Program counter
     pc: usize,
+    /// Pending operations
     pending_operations: BinaryHeap<InflightOperation>,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ComputeError {
     #[error("Machine terminated. Please use a new machine.")]
     Terminated,
@@ -220,7 +221,7 @@ impl Machine {
     /// * If the `complete_cycle` of an `InflightOperation` is less than the
     ///  `pc` of the `Machine`
     fn end_cycle(&mut self) -> Result<(), ComputeError> {
-        let mut prev = None;
+        let mut prev: Option<InflightOperation> = None;
         while let Some(next) = self.pending_operations.peek() {
             let complete_cycle = next.get_complete_cycle();
             assert!(complete_cycle >= self.pc);
@@ -231,7 +232,7 @@ impl Machine {
 
             let next = self.pending_operations.pop().unwrap();
             let output = next.get_output();
-            if prev.as_ref() == Some(&next) {
+            if prev.as_ref().map(|op| op.get_output()) == Some(output) {
                 return Err(match output {
                     OperationOutput::WriteToRegister(reg, _) => ComputeError::RegisterDataRace {
                         reg: *reg,
@@ -261,5 +262,76 @@ impl Machine {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::pem::types::{Const, Reg};
+
+    use super::*;
+
+    #[test]
+    fn test_terminated() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([Instruction::new().with_ldi(Reg(0), Const(0))]);
+        assert!(machine.compute(&program).is_ok());
+        assert!(machine
+            .compute(&program)
+            .is_err_and(|e| e == ComputeError::Terminated));
+    }
+
+    #[test]
+    fn test_invalid_register() {
+        let mut machine = Machine::new(HashMap::new());
+        let reg = REGISTER_COUNT as u32;
+        let program = Vec::from([Instruction::new().with_ldi(Reg(reg), Const(0))]);
+        assert!(machine.compute(&program).is_err_and(|e| e
+            == ComputeError::InvalidRegister {
+                reg: Reg(reg),
+                pc: 0
+            }));
+    }
+
+    #[test]
+    fn test_uninitialized_register() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([Instruction::new().with_add(Reg(0), Reg(0), Reg(0))]);
+        assert!(machine
+            .compute(&program)
+            .is_err_and(|e| e == ComputeError::UninitializedRegister { reg: Reg(0), pc: 0 }));
+    }
+
+    #[test]
+    fn test_uninitialized_memory() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([Instruction::new().with_ldr(Reg(0), Addr(0))]);
+        assert!(machine.compute(&program).is_err_and(|e| e
+            == ComputeError::UninitializedMemory {
+                addr: Addr(0),
+                pc: 0
+            }));
+    }
+
+    #[test]
+    fn test_register_data_race() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([
+            Instruction::new().with_ldi(Reg(0), Const(1)),
+            Instruction::new().with_add(Reg(0), Reg(0), Reg(0)),
+            Instruction::new().with_ldi(Reg(0), Const(3)),
+        ]);
+        assert!(machine.compute(&program).is_err_and(|e| e
+            == ComputeError::RegisterDataRace {
+                reg: Reg(0),
+                pc: 3,
+                inst1: 1,
+                inst2: 2
+            }));
+    }
+
+    #[test]
+    fn test_memory_data_race() {
+        println!("Memory data race is not possible with the current operation set");
     }
 }
