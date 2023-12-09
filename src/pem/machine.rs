@@ -326,6 +326,21 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_sub() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([
+            Instruction::new().with_ldi(Reg(0), Const(1)),
+            Instruction::new().with_ldi(Reg(1), Const(8)),
+            Instruction::new().with_sub(Reg(0), Reg(1), Reg(0)),
+        ]);
+        assert_eq!(
+            machine.compute(&program).map(|v| v.0),
+            Ok("(8 - 1)".to_string())
+        );
+        assert_eq!(machine.pc, 4);
+    }
+
+    #[test]
     fn test_example_program() {
         let mut machine = Machine::new(HashMap::from_iter(
             ('A'..='Z')

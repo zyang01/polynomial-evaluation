@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use log::trace;
+
 use super::types::{Addr, Const, Reg, Value};
 
 struct OperationLatency;
@@ -97,11 +99,17 @@ impl InflightOperation {
     /// * `dst` - destination register
     /// * `constant` - constant to load
     pub fn from_ldi(cycle: usize, dst: Reg, constant: Const) -> Self {
-        Self {
+        let myself = Self {
             output: OperationOutput::WriteToRegister(dst, Value(constant.0.to_string())),
             complete_by: cycle + OperationLatency::LDI,
             started_at: cycle,
-        }
+        };
+        trace!(
+            "LDI operation started at cycle #{} and expect to complete by cycle #{}",
+            cycle,
+            myself.complete_by
+        );
+        myself
     }
 
     /// Load a value from memory into a register
@@ -111,11 +119,17 @@ impl InflightOperation {
     /// * `dst` - destination register
     /// * `addr_value` - value of the memory address to load from
     pub fn from_ldr(cycle: usize, dst: Reg, addr_value: Value) -> Self {
-        Self {
+        let myself = Self {
             output: OperationOutput::WriteToRegister(dst, addr_value),
             complete_by: cycle + OperationLatency::LDR,
             started_at: cycle,
-        }
+        };
+        trace!(
+            "LDR operation started at cycle #{} and expect to complete by cycle #{}",
+            cycle,
+            myself.complete_by
+        );
+        myself
     }
 
     /// Store a value from a register into memory
@@ -125,11 +139,17 @@ impl InflightOperation {
     /// * `src_value` - value of the source register
     /// * `addr` - memory address to store into
     pub fn from_str(cycle: usize, src_value: Value, addr: Addr) -> Self {
-        Self {
+        let myself = Self {
             output: OperationOutput::WriteToMemory(addr, src_value),
             complete_by: cycle + OperationLatency::STR,
             started_at: cycle,
-        }
+        };
+        trace!(
+            "STR operation started at cycle #{} and expect to complete by cycle #{}",
+            cycle,
+            myself.complete_by
+        );
+        myself
     }
 
     /// Add the values in the source registers and put the sum in the
@@ -141,14 +161,20 @@ impl InflightOperation {
     /// * `src1_value` - value of the first source register
     /// * `src2_value` - value of the second source register
     pub fn from_add(cycle: usize, dst: Reg, src1_value: Value, src2_value: Value) -> Self {
-        Self {
+        let myself = Self {
             output: OperationOutput::WriteToRegister(
                 dst,
                 Value(format!("({} + {})", src2_value.0, src1_value.0)),
             ),
             complete_by: cycle + OperationLatency::ADD,
             started_at: cycle,
-        }
+        };
+        trace!(
+            "ADD operation started at cycle #{} and expect to complete by cycle #{}",
+            cycle,
+            myself.complete_by
+        );
+        myself
     }
 
     /// Subtract the value of source register 2 from source register 1 and put
@@ -160,14 +186,20 @@ impl InflightOperation {
     /// * `src1_value` - value of the first source register
     /// * `src2_value` - value of the second source register
     pub fn from_sub(cycle: usize, dst: Reg, src1_value: Value, src2_value: Value) -> Self {
-        Self {
+        let myself = Self {
             output: OperationOutput::WriteToRegister(
                 dst,
                 Value(format!("({} - {})", src1_value.0, src2_value.0)),
             ),
             complete_by: cycle + OperationLatency::SUB,
             started_at: cycle,
-        }
+        };
+        trace!(
+            "SUB operation started at cycle #{} and expect to complete by cycle #{}",
+            cycle,
+            myself.complete_by
+        );
+        myself
     }
 
     /// Multiply the values in the source registers and put the product in the
@@ -179,14 +211,20 @@ impl InflightOperation {
     /// * `src1_value` - value of the first source register
     /// * `src2_value` - value of the second source register
     pub fn from_mul(cycle: usize, dst: Reg, src1_value: Value, src2_value: Value) -> Self {
-        Self {
+        let myself = Self {
             output: OperationOutput::WriteToRegister(
                 dst,
                 Value(format!("({} * {})", src1_value.0, src2_value.0)),
             ),
             complete_by: cycle + OperationLatency::MUL,
             started_at: cycle,
-        }
+        };
+        trace!(
+            "MUL operation started at cycle #{} and expect to complete by cycle #{}",
+            cycle,
+            myself.complete_by
+        );
+        myself
     }
 
     pub fn get_output(&self) -> &OperationOutput {
