@@ -179,7 +179,7 @@ impl InflightOperation {
         src2_value: &ExprWrapper,
     ) -> Self {
         let myself = Self {
-            output: OperationOutput::WriteToRegister(dst, src1_value + src2_value),
+            output: OperationOutput::WriteToRegister(dst, src2_value + src1_value),
             complete_by: cycle + OperationLatency::ADD,
             started_at: cycle,
         };
@@ -372,7 +372,8 @@ mod tests {
             panic!("Expected WriteToRegister, got {:?}", add.get_output());
         };
         assert_eq!(reg, &Reg(0));
-        assert_eq!(value.eval(), String::from("(2 + 1)"));
+        assert_eq!(value.weak_eval(), String::from("(2 + 1)"));
+        assert_eq!(value.strong_eval(), String::from("3"));
         assert_eq!(add.get_complete_cycle(), OperationLatency::ADD);
         assert_eq!(add.get_instruction(), 0);
     }
@@ -384,7 +385,8 @@ mod tests {
             panic!("Expected WriteToRegister, got {:?}", sub.get_output());
         };
         assert_eq!(*reg, Reg(0));
-        assert_eq!(value.eval(), String::from("(1 - 2)"));
+        assert_eq!(value.weak_eval(), String::from("(1 - 2)"));
+        assert_eq!(value.strong_eval(), String::from("4294967295"));
         assert_eq!(sub.get_complete_cycle(), OperationLatency::SUB);
         assert_eq!(sub.get_instruction(), 0);
     }
@@ -396,7 +398,8 @@ mod tests {
             panic!("Expected WriteToRegister, got {:?}", mul.get_output());
         };
         assert_eq!(reg, &Reg(0));
-        assert_eq!(value.eval(), String::from("(1 * 2)"));
+        assert_eq!(value.weak_eval(), String::from("(1 * 2)"));
+        assert_eq!(value.strong_eval(), String::from("2"));
         assert_eq!(mul.get_complete_cycle(), OperationLatency::MUL);
         assert_eq!(mul.get_instruction(), 0);
     }

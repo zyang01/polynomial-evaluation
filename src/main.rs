@@ -28,7 +28,10 @@ fn main() {
     );
 
     match machine.compute(&program) {
-        Ok(value) => info!("Result: {}", value),
+        Ok(value) => {
+            info!("Weak eval result: {}", value);
+            info!("Strong eval result: {}", value.strong_eval())
+        }
         Err(e) => error!("Error: {}", e),
     }
 }

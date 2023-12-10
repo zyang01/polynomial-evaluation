@@ -35,7 +35,7 @@ pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, ExprWrapper> 
             addr.parse::<u32>()
                 .unwrap_or_else(|e| panic!("Invalid memory address {addr} on line {num}: {e}")),
         );
-        memory.insert(addr, value.into());
+        memory.insert(addr, ExprWrapper::from_symbolic_variable(value));
     }
     memory
 }

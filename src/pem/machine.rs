@@ -333,20 +333,18 @@ mod test {
             Instruction::new().with_ldi(Reg(1), Const(8)),
             Instruction::new().with_sub(Reg(0), Reg(1), Reg(0)),
         ]);
-        assert_eq!(
-            machine.compute(&program).map(|v| v.eval()),
-            Ok("(8 - 1)".to_string())
-        );
+        let expr = machine.compute(&program).unwrap();
+        assert_eq!(expr.weak_eval(), "(8 - 1)".to_string());
+        assert_eq!(expr.strong_eval(), "7".to_string());
         assert_eq!(machine.pc, 4);
     }
 
     #[test]
     fn test_example_program() {
-        let mut machine = Machine::new(HashMap::from_iter(
-            ('A'..='Z')
-                .enumerate()
-                .map(|(i, c)| (Addr(i as u32), c.to_string().into())),
-        ));
+        let mut machine =
+            Machine::new(HashMap::from_iter(('A'..='Z').enumerate().map(|(i, c)| {
+                (Addr(i as u32), ExprWrapper::from_symbolic_variable(c))
+            })));
         let program = Vec::from([
             Instruction::new()
                 .with_ldi(Reg(0), Const(1))
@@ -362,10 +360,9 @@ mod test {
             Instruction::new(),
             Instruction::new().with_mul(Reg(0), Reg(0), Reg(2)),
         ]);
-        assert_eq!(
-            machine.compute(&program).map(|v| v.eval()),
-            Ok("((A + 1) * (B + 2))".to_string())
-        );
+        let expr = machine.compute(&program).unwrap();
+        assert_eq!(expr.weak_eval(), "((A + 1) * (B + 2))".to_string());
+        assert_eq!(expr.strong_eval(), "(A + 1) * (B + 2)".to_string());
         assert_eq!(machine.pc, 18);
     }
 
