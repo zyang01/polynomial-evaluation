@@ -222,85 +222,167 @@ mod test {
     fn test_strong_eval_wraparound() {
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Numeric(value),
-            precedence: _,
+            precedence: Precedence::NumericOrSymbolicVariable,
         } = EvaluatedExpr::from(200u32) + EvaluatedExpr::from(u32::MAX)
         else {
-            panic!("Expected EvaluationExprKind::Numeric")
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
         };
         assert_eq!(value, 199);
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Numeric(value),
-            precedence: _,
+            precedence: Precedence::NumericOrSymbolicVariable,
         } = EvaluatedExpr::from(1u32) - EvaluatedExpr::from(2u32)
         else {
-            panic!("Expected EvaluationExprKind::Numeric")
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
         };
         assert_eq!(value, u32::MAX);
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Numeric(value),
-            precedence: _,
+            precedence: Precedence::NumericOrSymbolicVariable,
         } = EvaluatedExpr::from(3_000_000_000) * EvaluatedExpr::from(2)
         else {
-            panic!("Expected EvaluationExprKind::Numeric")
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
         };
         assert_eq!(value, 1_705_032_704);
+    }
+
+    #[test]
+    fn test_strong_eval_numeric() {
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = EvaluatedExpr::from(1u32) + EvaluatedExpr::from(2u32)
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 3);
+
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = EvaluatedExpr::from(1u32) + (EvaluatedExpr::from(2u32) + EvaluatedExpr::from(3u32))
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 6);
+
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = EvaluatedExpr::from(1u32) + EvaluatedExpr::from(2u32) * EvaluatedExpr::from(3u32)
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 7);
+
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = (EvaluatedExpr::from(1u32) + EvaluatedExpr::from(2u32)) * EvaluatedExpr::from(3u32)
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 9);
+
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = EvaluatedExpr::from(1u32) * EvaluatedExpr::from(2u32) + EvaluatedExpr::from(3u32)
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 5);
+
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = EvaluatedExpr::from(1u32) * (EvaluatedExpr::from(2u32) + EvaluatedExpr::from(3u32))
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 5);
+
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Numeric(value),
+            precedence: Precedence::NumericOrSymbolicVariable,
+        } = EvaluatedExpr::from(9u32) * EvaluatedExpr::from(10u32)
+            - ((EvaluatedExpr::from(7u32) + EvaluatedExpr::from(8u32))
+                - (EvaluatedExpr::from(6u32) * EvaluatedExpr::from(3u32)))
+        else {
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
+        };
+        assert_eq!(value, 93);
+    }
+
+    #[test]
+    fn test_strong_eval_symbolic_variables() {
+        let EvaluatedExpr {
+            kind: EvaluatedExprKind::Value(value),
+            precedence: Precedence::Sub,
+        } = EvaluatedExpr::from("A") * EvaluatedExpr::from("B")
+            - ((EvaluatedExpr::from("C") + EvaluatedExpr::from("D"))
+                - (EvaluatedExpr::from("E") * EvaluatedExpr::from(12)))
+        else {
+            panic!("Expected EvaluationExprKind::Value and Precedence::Sub")
+        };
+        assert_eq!(value, "A * B - (C + D - E * 12)");
     }
 
     #[test]
     fn test_strong_eval_add_sub() {
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Value(value),
-            precedence: _,
+            precedence: Precedence::Sub,
         } = EvaluatedExpr::from(1) + EvaluatedExpr::from(2) - EvaluatedExpr::from("A")
         else {
-            panic!("Expected EvaluationExprKind::Value")
+            panic!("Expected EvaluationExprKind::Value and Precedence::Sub")
         };
         assert_eq!(value, "3 - A");
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Value(value),
-            precedence: _,
+            precedence: Precedence::Add,
         } = EvaluatedExpr::from(1) + (EvaluatedExpr::from(2) - EvaluatedExpr::from("A"))
         else {
-            panic!("Expected EvaluationExprKind::Value")
+            panic!("Expected EvaluationExprKind::Value and Precedence::Add")
         };
         assert_eq!(value, "1 + 2 - A");
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Numeric(value),
-            precedence: _,
+            precedence: Precedence::NumericOrSymbolicVariable,
         } = EvaluatedExpr::from(4) + EvaluatedExpr::from(2) - EvaluatedExpr::from(1)
         else {
-            panic!("Expected EvaluationExprKind::Numeric")
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
         };
         assert_eq!(value, 5);
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Numeric(value),
-            precedence: _,
+            precedence: Precedence::NumericOrSymbolicVariable,
         } = EvaluatedExpr::from(4) + (EvaluatedExpr::from(2) - EvaluatedExpr::from(1))
         else {
-            panic!("Expected EvaluationExprKind::Numeric")
+            panic!("Expected EvaluationExprKind::Numeric and Precedence::NumericOrSymbolicVariable")
         };
         assert_eq!(value, 5);
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Value(value),
-            precedence: _,
+            precedence: Precedence::Sub,
         } = EvaluatedExpr::from("A") + EvaluatedExpr::from("B") - EvaluatedExpr::from("C")
         else {
-            panic!("Expected EvaluationExprKind::Value")
+            panic!("Expected EvaluationExprKind::Value and Precedence::Sub")
         };
         assert_eq!(value, "A + B - C");
 
         let EvaluatedExpr {
             kind: EvaluatedExprKind::Value(value),
-            precedence: _,
+            precedence: Precedence::Add,
         } = EvaluatedExpr::from("A") + (EvaluatedExpr::from("B") - EvaluatedExpr::from("C"))
         else {
-            panic!("Expected EvaluationExprKind::Value")
+            panic!("Expected EvaluationExprKind::Value and Precedence::Add")
         };
         assert_eq!(value, "A + B - C");
     }

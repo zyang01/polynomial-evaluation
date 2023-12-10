@@ -179,6 +179,7 @@ impl InflightOperation {
         src2_value: &ExprWrapper,
     ) -> Self {
         let myself = Self {
+            // NB src2 is lhs and src1 is rhs
             output: OperationOutput::WriteToRegister(dst, src2_value + src1_value),
             complete_by: cycle + OperationLatency::ADD,
             started_at: cycle,
@@ -262,14 +263,6 @@ impl InflightOperation {
 mod tests {
     use super::*;
 
-    fn const_1() -> ExprWrapper {
-        1.into()
-    }
-
-    fn const_2() -> ExprWrapper {
-        2.into()
-    }
-
     #[test]
     fn test_operation_output_equality() {
         let op1 = OperationOutput::WriteToRegister(Reg(0), 1.into());
@@ -294,15 +287,12 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_ordering() {
-        let const_1 = const_1();
-        let const_2 = const_2();
-
         let ldi = InflightOperation::from_ldi(0, Reg(0), Const(1));
-        let ldr = InflightOperation::from_ldr(0, Reg(0), &const_1);
-        let str = InflightOperation::from_str(0, &const_1, Addr(0));
-        let add = InflightOperation::from_add(0, Reg(0), &const_1, &const_2);
-        let sub = InflightOperation::from_sub(0, Reg(0), &const_1, &const_2);
-        let mul = InflightOperation::from_mul(0, Reg(0), &const_1, &const_2);
+        let ldr = InflightOperation::from_ldr(0, Reg(0), &1.into());
+        let str = InflightOperation::from_str(0, &1.into(), Addr(0));
+        let add = InflightOperation::from_add(0, Reg(0), &1.into(), &2.into());
+        let sub = InflightOperation::from_sub(0, Reg(0), &1.into(), &2.into());
+        let mul = InflightOperation::from_mul(0, Reg(0), &1.into(), &2.into());
 
         assert_eq!(ldi, ldi);
         assert_eq!(ldr, ldr);
@@ -337,7 +327,7 @@ mod tests {
         let ldi = InflightOperation::from_ldi(0, Reg(0), Const(1));
         assert_eq!(
             ldi.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), const_1())
+            &OperationOutput::WriteToRegister(Reg(0), 1.into())
         );
         assert_eq!(ldi.get_complete_cycle(), OperationLatency::LDI);
         assert_eq!(ldi.get_instruction(), 0);
@@ -345,10 +335,10 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_ldr() {
-        let ldr = InflightOperation::from_ldr(0, Reg(0), &const_1());
+        let ldr = InflightOperation::from_ldr(0, Reg(0), &1.into());
         assert_eq!(
             ldr.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), const_1())
+            &OperationOutput::WriteToRegister(Reg(0), 1.into())
         );
         assert_eq!(ldr.get_complete_cycle(), OperationLatency::LDR);
         assert_eq!(ldr.get_instruction(), 0);
@@ -356,10 +346,10 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_str() {
-        let str_ = InflightOperation::from_str(0, &const_1(), Addr(0));
+        let str_ = InflightOperation::from_str(0, &1.into(), Addr(0));
         assert_eq!(
             str_.get_output(),
-            &OperationOutput::WriteToMemory(Addr(0), const_1())
+            &OperationOutput::WriteToMemory(Addr(0), 1.into())
         );
         assert_eq!(str_.get_complete_cycle(), OperationLatency::STR);
         assert_eq!(str_.get_instruction(), 0);
@@ -367,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_add() {
-        let add = InflightOperation::from_add(0, Reg(0), &const_1(), &const_2());
+        let add = InflightOperation::from_add(0, Reg(0), &1.into(), &2.into());
         let OperationOutput::WriteToRegister(reg, value) = add.get_output() else {
             panic!("Expected WriteToRegister, got {:?}", add.get_output());
         };
@@ -380,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_sub() {
-        let sub = InflightOperation::from_sub(0, Reg(0), &const_1(), &const_2());
+        let sub = InflightOperation::from_sub(0, Reg(0), &1.into(), &2.into());
         let OperationOutput::WriteToRegister(reg, value) = sub.get_output() else {
             panic!("Expected WriteToRegister, got {:?}", sub.get_output());
         };
@@ -393,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_mul() {
-        let mul = InflightOperation::from_mul(0, Reg(0), &const_1(), &const_2());
+        let mul = InflightOperation::from_mul(0, Reg(0), &1.into(), &2.into());
         let OperationOutput::WriteToRegister(reg, value) = mul.get_output() else {
             panic!("Expected WriteToRegister, got {:?}", mul.get_output());
         };
