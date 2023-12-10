@@ -1,0 +1,96 @@
+# cycle 0
+# load 4 to reg 3
+ldi 3 4
+# load `C` to reg 6
+ldr 6 2
+;
+# cycle 1
+# load 3 to reg 2
+ldi 2 3
+# load `D` to reg 7
+ldr 7 3
+;
+# cycle 2
+# load 2 to reg 1
+ldi 1 2
+# load `B` to reg 5
+ldr 5 1
+;
+# cycle 3
+# load 1 to reg 0
+ldi 0 1
+# load `A` to reg 4
+ldr 4 0
+;
+# cycle 4
+;
+# cycle 5
+# `4 * C` to reg 3
+mul 3 3 6
+;
+# cycle 6
+# `C - D` to reg 3
+sub 3 6 7
+;
+# cycle 7
+# `B + 2` to reg 1
+add 1 1 5
+;
+# cycle 8
+# `A + 1` to reg 0
+add 0 0 4
+;
+# cycle 9
+# `(C - D) + 3` to reg 2
+add 2 2 3
+;
+# cycle 10
+# `(A + 1) * (B + 2)` to reg 1
+mul 1 0 1
+;
+# cycle 11
+;
+# cycle 12
+;
+# cycle 13
+;
+# cycle 14
+;
+# cycle 15
+# `(4 * C) * D` to reg 3
+mul 3 3 7
+;
+# cycle 16
+;
+# cycle 17
+;
+# cycle 18
+;
+# cycle 19
+;
+# cycle 20
+# `(A + 1) * (B + 2) * ((C - D) + 3)` to reg 1
+mul 1 1 2
+;
+# cycle 21
+;
+# cycle 22
+;
+# cycle 23
+;
+# cycle 24
+;
+# cycle 25
+;
+# cycle 26
+;
+# cycle 27
+;
+# cycle 28
+;
+# cycle 29
+;
+# cycle 30
+# `(A + 1) * (B + 2) * ((C - D) + 3) + ((4 * C) * D)` to reg 0
+add 0 3 1
+;

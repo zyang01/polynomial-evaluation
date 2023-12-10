@@ -367,6 +367,65 @@ mod test {
     }
 
     #[test]
+    fn test_long_polynomial() {
+        let mut machine =
+            Machine::new(HashMap::from_iter(('A'..='Z').enumerate().map(|(i, c)| {
+                (Addr(i as u32), ExprWrapper::from_symbolic_variable(c))
+            })));
+        let program = Vec::from([
+            Instruction::new()
+                .with_ldi(Reg(3), Const(4))
+                .with_ldr(Reg(6), Addr(2)),
+            Instruction::new()
+                .with_ldi(Reg(2), Const(3))
+                .with_ldr(Reg(7), Addr(3)),
+            Instruction::new()
+                .with_ldi(Reg(1), Const(2))
+                .with_ldr(Reg(5), Addr(1)),
+            Instruction::new()
+                .with_ldi(Reg(0), Const(1))
+                .with_ldr(Reg(4), Addr(0)),
+            Instruction::new(),
+            Instruction::new().with_mul(Reg(3), Reg(3), Reg(6)),
+            Instruction::new().with_sub(Reg(3), Reg(6), Reg(7)),
+            Instruction::new().with_add(Reg(1), Reg(1), Reg(5)),
+            Instruction::new().with_add(Reg(0), Reg(0), Reg(4)),
+            Instruction::new().with_add(Reg(2), Reg(2), Reg(3)),
+            Instruction::new().with_mul(Reg(1), Reg(0), Reg(1)),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new().with_mul(Reg(3), Reg(3), Reg(7)),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new().with_mul(Reg(1), Reg(1), Reg(2)),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new(),
+            Instruction::new().with_add(Reg(0), Reg(3), Reg(1)),
+        ]);
+        let expr = machine.compute(&program).unwrap();
+        assert_eq!(
+            expr.weak_eval(),
+            "((((A + 1) * (B + 2)) * ((C - D) + 3)) + ((4 * C) * D))".to_string()
+        );
+        assert_eq!(
+            expr.strong_eval(),
+            "(A + 1) * (B + 2) * (C - D + 3) + 4 * C * D".to_string()
+        );
+        assert_eq!(machine.pc, 32);
+    }
+
+    #[test]
     fn test_uninitialized_0_register() {
         let mut machine = Machine::new(HashMap::new());
         let program = Vec::new();
