@@ -4,7 +4,7 @@ use log::info;
 
 use crate::pem::{
     types::{Addr, Const, Reg},
-    Expr, Instruction, RcExpr,
+    ExprWrapper, Instruction,
 };
 
 /// Read startup memory from file
@@ -14,7 +14,7 @@ use crate::pem::{
 ///
 /// # Returns
 /// * `HashMap<Addr, RcExpr>` - startup memory
-pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, RcExpr> {
+pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, ExprWrapper> {
     info!("Reading startup memory from `{filepath}`");
 
     let mut memory = HashMap::new();
@@ -35,7 +35,7 @@ pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, RcExpr> {
             addr.parse::<u32>()
                 .unwrap_or_else(|e| panic!("Invalid memory address {addr} on line {num}: {e}")),
         );
-        memory.insert(addr, Expr::new_value(value));
+        memory.insert(addr, value.into());
     }
     memory
 }

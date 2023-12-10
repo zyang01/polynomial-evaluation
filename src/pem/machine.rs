@@ -6,7 +6,7 @@ use thiserror::Error;
 use super::{
     inflight_operation::{InflightOperation, OperationOutput},
     types::{Addr, Reg},
-    Instruction, RcExpr,
+    ExprWrapper, Instruction,
 };
 
 const REGISTER_COUNT: usize = 8;
@@ -14,9 +14,9 @@ const REGISTER_COUNT: usize = 8;
 #[derive(Debug)]
 pub(crate) struct Machine {
     /// Registers
-    regs: Vec<Option<RcExpr>>,
+    regs: Vec<Option<ExprWrapper>>,
     /// Memory
-    mem: HashMap<Addr, RcExpr>,
+    mem: HashMap<Addr, ExprWrapper>,
     /// Program counter
     pc: usize,
     /// Pending operations
@@ -56,7 +56,7 @@ impl Machine {
     ///
     /// # Arguments
     /// * `mem` - memory to initialize with
-    pub fn new(mem: HashMap<Addr, RcExpr>) -> Self {
+    pub fn new(mem: HashMap<Addr, ExprWrapper>) -> Self {
         Self {
             regs: vec![None; REGISTER_COUNT],
             mem,
@@ -81,7 +81,7 @@ impl Machine {
     /// # Returns
     /// * `Ok(value)` if the program terminated successfully
     /// * `Err(ComputeError)` if the program terminated with an error
-    pub fn compute(&mut self, program: &Vec<Instruction>) -> Result<RcExpr, ComputeError> {
+    pub fn compute(&mut self, program: &Vec<Instruction>) -> Result<&ExprWrapper, ComputeError> {
         if self.pc != 0 {
             return Err(ComputeError::Terminated);
         }
@@ -126,7 +126,7 @@ impl Machine {
     /// * `Err(ComputeError::InvalidRegister)` if the register is invalid
     /// * `Err(ComputeError::UninitializedRegister)` if the register is valid
     ///   but uninitialized
-    fn get_register_value(&self, reg: Reg) -> Result<RcExpr, ComputeError> {
+    fn get_register_value(&self, reg: Reg) -> Result<&ExprWrapper, ComputeError> {
         self.regs
             .get(reg.0 as usize)
             .ok_or(ComputeError::InvalidRegister { reg, pc: self.pc })?
@@ -139,7 +139,7 @@ impl Machine {
                     v,
                     self.pc
                 );
-                v.clone()
+                v
             })
     }
 
@@ -152,7 +152,7 @@ impl Machine {
     /// * `Ok(value)` if the memory address is valid and initialized
     /// * `Err(ComputeError::UninitializedMemory)` if the memory address is
     ///   valid but uninitialized
-    fn get_address_value(&self, addr: &Addr) -> Result<RcExpr, ComputeError> {
+    fn get_address_value(&self, addr: &Addr) -> Result<&ExprWrapper, ComputeError> {
         self.mem
             .get(addr)
             .ok_or(ComputeError::UninitializedMemory {
@@ -166,7 +166,7 @@ impl Machine {
                     v,
                     self.pc
                 );
-                v.clone()
+                v
             })
     }
 
@@ -321,10 +321,7 @@ impl Machine {
 
 #[cfg(test)]
 mod test {
-    use crate::pem::{
-        types::{Const, Reg},
-        Expr,
-    };
+    use crate::pem::types::{Const, Reg};
 
     use super::*;
 
@@ -345,10 +342,11 @@ mod test {
 
     #[test]
     fn test_example_program() {
-        let mut machine =
-            Machine::new(HashMap::from_iter(('A'..='Z').enumerate().map(|(i, c)| {
-                (Addr(i as u32), Expr::new_value(c.to_string().as_str()))
-            })));
+        let mut machine = Machine::new(HashMap::from_iter(
+            ('A'..='Z')
+                .enumerate()
+                .map(|(i, c)| (Addr(i as u32), c.to_string().into())),
+        ));
         let program = Vec::from([
             Instruction::new()
                 .with_ldi(Reg(0), Const(1))

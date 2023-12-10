@@ -4,9 +4,14 @@ mod inflight_operation;
 mod instruction;
 mod machine;
 
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    ops::{Add, Mul, Sub},
+    rc::Rc,
+};
 
 pub(crate) use instruction::Instruction;
+
 pub(crate) use machine::Machine;
 
 /// PEM primitive types
@@ -43,50 +48,91 @@ pub(crate) mod types {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum Expr {
+enum Expr {
     Const(u32),
     Value(String),
-    Add(Rc<Expr>, Rc<Expr>),
-    Sub(Rc<Expr>, Rc<Expr>),
-    Mul(Rc<Expr>, Rc<Expr>),
+    Add(RcRefCellExpr, RcRefCellExpr),
+    Sub(RcRefCellExpr, RcRefCellExpr),
+    Mul(RcRefCellExpr, RcRefCellExpr),
 }
 
-pub(crate) type RcExpr = Rc<Expr>;
+type RcRefCellExpr = Rc<RefCell<Expr>>;
 
-impl std::fmt::Display for Expr {
+#[derive(Debug, Clone)]
+pub(crate) struct ExprWrapper(RcRefCellExpr);
+
+impl std::fmt::Display for ExprWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.eval())
     }
 }
 
-impl Expr {
-    pub fn new_const(value: u32) -> RcExpr {
-        Rc::new(Self::Const(value))
+impl From<String> for ExprWrapper {
+    fn from(value: String) -> Self {
+        Self::new(Expr::Value(value))
+    }
+}
+
+impl From<&str> for ExprWrapper {
+    fn from(value: &str) -> Self {
+        Self::new(Expr::Value(value.to_string()))
+    }
+}
+
+impl From<u32> for ExprWrapper {
+    fn from(value: u32) -> Self {
+        Self::new(Expr::Const(value))
+    }
+}
+
+impl Add for &ExprWrapper {
+    type Output = ExprWrapper;
+
+    fn add(self, rhs: &ExprWrapper) -> Self::Output {
+        ExprWrapper::new(Expr::Add(self.0.clone(), rhs.0.clone()))
+    }
+}
+
+impl Sub for &ExprWrapper {
+    type Output = ExprWrapper;
+
+    fn sub(self, rhs: &ExprWrapper) -> Self::Output {
+        ExprWrapper::new(Expr::Sub(self.0.clone(), rhs.0.clone()))
+    }
+}
+
+impl Mul for &ExprWrapper {
+    type Output = ExprWrapper;
+
+    fn mul(self, rhs: &ExprWrapper) -> Self::Output {
+        ExprWrapper::new(Expr::Mul(self.0.clone(), rhs.0.clone()))
+    }
+}
+
+impl ExprWrapper {
+    fn new(expr: Expr) -> Self {
+        Self(Rc::new(RefCell::new(expr)))
     }
 
-    pub fn new_value(value: &str) -> RcExpr {
-        Rc::new(Self::Value(value.to_string()))
-    }
-
-    pub fn add(src1: RcExpr, src2: RcExpr) -> RcExpr {
-        Rc::new(Self::Add(src1, src2))
-    }
-
-    pub fn sub(src1: RcExpr, src2: RcExpr) -> RcExpr {
-        Rc::new(Self::Sub(src1, src2))
-    }
-
-    pub fn mul(src1: RcExpr, src2: RcExpr) -> RcExpr {
-        Rc::new(Self::Mul(src1, src2))
+    fn eval_expr(expr: &RcRefCellExpr) -> String {
+        let value = match *expr.borrow() {
+            Expr::Const(constant) => constant.to_string(),
+            Expr::Value(ref val) => val.clone(),
+            Expr::Add(ref src1, ref src2) => {
+                format!("({} + {})", Self::eval_expr(src2), Self::eval_expr(src1))
+            }
+            Expr::Sub(ref src1, ref src2) => {
+                format!("({} - {})", Self::eval_expr(src1), Self::eval_expr(src2))
+            }
+            Expr::Mul(ref src1, ref src2) => {
+                format!("({} * {})", Self::eval_expr(src1), Self::eval_expr(src2))
+            }
+        };
+        *expr.borrow_mut() = Expr::Value(value.clone());
+        value
     }
 
     pub fn eval(&self) -> String {
-        match self {
-            Self::Const(constant) => constant.to_string(),
-            Self::Value(val) => val.clone(),
-            Self::Add(src1, src2) => format!("({} + {})", src2.eval(), src1.eval()),
-            Self::Sub(src1, src2) => format!("({} - {})", src1.eval(), src2.eval()),
-            Self::Mul(src1, src2) => format!("({} * {})", src1.eval(), src2.eval()),
-        }
+        Self::eval_expr(&self.0)
     }
 }
