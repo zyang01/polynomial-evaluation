@@ -28,7 +28,7 @@ fn main() {
     );
 
     match machine.compute(&program) {
-        Ok(value) => info!("Result: {}", value.0),
+        Ok(value) => info!("Result: {}", value),
         Err(e) => error!("Error: {}", e),
     }
 }

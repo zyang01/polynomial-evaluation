@@ -5,8 +5,8 @@ use thiserror::Error;
 
 use super::{
     inflight_operation::{InflightOperation, OperationOutput},
-    types::{Addr, Reg, Value},
-    Instruction,
+    types::{Addr, Reg},
+    Instruction, RcExpr,
 };
 
 const REGISTER_COUNT: usize = 8;
@@ -14,9 +14,9 @@ const REGISTER_COUNT: usize = 8;
 #[derive(Debug)]
 pub(crate) struct Machine {
     /// Registers
-    regs: Vec<Option<Value>>,
+    regs: Vec<Option<RcExpr>>,
     /// Memory
-    mem: HashMap<Addr, Value>,
+    mem: HashMap<Addr, RcExpr>,
     /// Program counter
     pc: usize,
     /// Pending operations
@@ -56,7 +56,7 @@ impl Machine {
     ///
     /// # Arguments
     /// * `mem` - memory to initialize with
-    pub fn new(mem: HashMap<Addr, Value>) -> Self {
+    pub fn new(mem: HashMap<Addr, RcExpr>) -> Self {
         Self {
             regs: vec![None; REGISTER_COUNT],
             mem,
@@ -81,7 +81,7 @@ impl Machine {
     /// # Returns
     /// * `Ok(value)` if the program terminated successfully
     /// * `Err(ComputeError)` if the program terminated with an error
-    pub fn compute(&mut self, program: &Vec<Instruction>) -> Result<Value, ComputeError> {
+    pub fn compute(&mut self, program: &Vec<Instruction>) -> Result<RcExpr, ComputeError> {
         if self.pc != 0 {
             return Err(ComputeError::Terminated);
         }
@@ -126,7 +126,7 @@ impl Machine {
     /// * `Err(ComputeError::InvalidRegister)` if the register is invalid
     /// * `Err(ComputeError::UninitializedRegister)` if the register is valid
     ///   but uninitialized
-    fn get_register_value(&self, reg: Reg) -> Result<Value, ComputeError> {
+    fn get_register_value(&self, reg: Reg) -> Result<RcExpr, ComputeError> {
         self.regs
             .get(reg.0 as usize)
             .ok_or(ComputeError::InvalidRegister { reg, pc: self.pc })?
@@ -136,7 +136,7 @@ impl Machine {
                 trace!(
                     "Register {} accessed with value `{}` at cycle #{}",
                     reg,
-                    v.0,
+                    v,
                     self.pc
                 );
                 v.clone()
@@ -152,7 +152,7 @@ impl Machine {
     /// * `Ok(value)` if the memory address is valid and initialized
     /// * `Err(ComputeError::UninitializedMemory)` if the memory address is
     ///   valid but uninitialized
-    fn get_address_value(&self, addr: &Addr) -> Result<Value, ComputeError> {
+    fn get_address_value(&self, addr: &Addr) -> Result<RcExpr, ComputeError> {
         self.mem
             .get(addr)
             .ok_or(ComputeError::UninitializedMemory {
@@ -163,7 +163,7 @@ impl Machine {
                 trace!(
                     "Memory address {} accessed with value `{}` at cycle #{}",
                     addr,
-                    v.0,
+                    v,
                     self.pc
                 );
                 v.clone()
@@ -261,7 +261,7 @@ impl Machine {
             let next = self.pending_operations.pop().unwrap();
             let output = next.get_output();
             debug!(
-                "Operation originated by instruction #{} completed at cycle #{}: {:?}",
+                "Operation originated by instruction #{} completed at cycle #{}: {}",
                 next.get_instruction(),
                 self.pc,
                 output
@@ -295,7 +295,7 @@ impl Machine {
                     trace!(
                         "Register {} written with value `{}` at cycle #{}",
                         reg,
-                        value.0,
+                        value,
                         self.pc
                     )
                 }
@@ -304,7 +304,7 @@ impl Machine {
                     trace!(
                         "Memory address {} written with value `{}` at cycle #{}",
                         addr,
-                        value.0,
+                        value,
                         self.pc
                     )
                 }
@@ -321,7 +321,10 @@ impl Machine {
 
 #[cfg(test)]
 mod test {
-    use crate::pem::types::{Const, Reg};
+    use crate::pem::{
+        types::{Const, Reg},
+        Expr,
+    };
 
     use super::*;
 
@@ -334,7 +337,7 @@ mod test {
             Instruction::new().with_sub(Reg(0), Reg(1), Reg(0)),
         ]);
         assert_eq!(
-            machine.compute(&program).map(|v| v.0),
+            machine.compute(&program).map(|v| v.eval()),
             Ok("(8 - 1)".to_string())
         );
         assert_eq!(machine.pc, 4);
@@ -342,11 +345,10 @@ mod test {
 
     #[test]
     fn test_example_program() {
-        let mut machine = Machine::new(HashMap::from_iter(
-            ('A'..='Z')
-                .enumerate()
-                .map(|(i, c)| (Addr(i as u32), Value(c.to_string()))),
-        ));
+        let mut machine =
+            Machine::new(HashMap::from_iter(('A'..='Z').enumerate().map(|(i, c)| {
+                (Addr(i as u32), Expr::new_value(c.to_string().as_str()))
+            })));
         let program = Vec::from([
             Instruction::new()
                 .with_ldi(Reg(0), Const(1))
@@ -363,7 +365,7 @@ mod test {
             Instruction::new().with_mul(Reg(0), Reg(0), Reg(2)),
         ]);
         assert_eq!(
-            machine.compute(&program).map(|v| v.0),
+            machine.compute(&program).map(|v| v.eval()),
             Ok("((A + 1) * (B + 2))".to_string())
         );
         assert_eq!(machine.pc, 18);

@@ -2,7 +2,10 @@ use std::cmp::Ordering;
 
 use log::trace;
 
-use super::types::{Addr, Const, Reg, Value};
+use super::{
+    types::{Addr, Const, Reg},
+    Expr, RcExpr,
+};
 
 struct OperationLatency;
 impl OperationLatency {
@@ -22,8 +25,17 @@ impl OperationLatency {
 /// register/memory address are considered equal regardless of the values.
 #[derive(Debug)]
 pub(super) enum OperationOutput {
-    WriteToRegister(Reg, Value),
-    WriteToMemory(Addr, Value),
+    WriteToRegister(Reg, RcExpr),
+    WriteToMemory(Addr, RcExpr),
+}
+
+impl std::fmt::Display for OperationOutput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WriteToRegister(dst, value) => write!(f, "WriteToRegister({}, `{}`)", dst, value),
+            Self::WriteToMemory(addr, value) => write!(f, "WriteToMemory({}, `{}`)", addr, value),
+        }
+    }
 }
 
 impl Ord for OperationOutput {
@@ -98,9 +110,9 @@ impl InflightOperation {
     /// * `cycle` - cycle when the operation starts
     /// * `dst` - destination register
     /// * `constant` - constant to load
-    pub fn from_ldi(cycle: usize, dst: Reg, constant: Const) -> Self {
+    pub fn from_ldi(cycle: usize, dst: Reg, Const(constant): Const) -> Self {
         let myself = Self {
-            output: OperationOutput::WriteToRegister(dst, Value(constant.0.to_string())),
+            output: OperationOutput::WriteToRegister(dst, Expr::new_const(constant)),
             complete_by: cycle + OperationLatency::LDI,
             started_at: cycle,
         };
@@ -118,7 +130,7 @@ impl InflightOperation {
     /// * `cycle` - cycle when the operation starts
     /// * `dst` - destination register
     /// * `addr_value` - value of the memory address to load from
-    pub fn from_ldr(cycle: usize, dst: Reg, addr_value: Value) -> Self {
+    pub fn from_ldr(cycle: usize, dst: Reg, addr_value: RcExpr) -> Self {
         let myself = Self {
             output: OperationOutput::WriteToRegister(dst, addr_value),
             complete_by: cycle + OperationLatency::LDR,
@@ -138,7 +150,7 @@ impl InflightOperation {
     /// * `cycle` - cycle when the operation starts
     /// * `src_value` - value of the source register
     /// * `addr` - memory address to store into
-    pub fn from_str(cycle: usize, src_value: Value, addr: Addr) -> Self {
+    pub fn from_str(cycle: usize, src_value: RcExpr, addr: Addr) -> Self {
         let myself = Self {
             output: OperationOutput::WriteToMemory(addr, src_value),
             complete_by: cycle + OperationLatency::STR,
@@ -160,12 +172,9 @@ impl InflightOperation {
     /// * `dst` - destination register
     /// * `src1_value` - value of the first source register
     /// * `src2_value` - value of the second source register
-    pub fn from_add(cycle: usize, dst: Reg, src1_value: Value, src2_value: Value) -> Self {
+    pub fn from_add(cycle: usize, dst: Reg, src1_value: RcExpr, src2_value: RcExpr) -> Self {
         let myself = Self {
-            output: OperationOutput::WriteToRegister(
-                dst,
-                Value(format!("({} + {})", src2_value.0, src1_value.0)),
-            ),
+            output: OperationOutput::WriteToRegister(dst, Expr::add(src1_value, src2_value)),
             complete_by: cycle + OperationLatency::ADD,
             started_at: cycle,
         };
@@ -185,12 +194,9 @@ impl InflightOperation {
     /// * `dst` - destination register
     /// * `src1_value` - value of the first source register
     /// * `src2_value` - value of the second source register
-    pub fn from_sub(cycle: usize, dst: Reg, src1_value: Value, src2_value: Value) -> Self {
+    pub fn from_sub(cycle: usize, dst: Reg, src1_value: RcExpr, src2_value: RcExpr) -> Self {
         let myself = Self {
-            output: OperationOutput::WriteToRegister(
-                dst,
-                Value(format!("({} - {})", src1_value.0, src2_value.0)),
-            ),
+            output: OperationOutput::WriteToRegister(dst, Expr::sub(src1_value, src2_value)),
             complete_by: cycle + OperationLatency::SUB,
             started_at: cycle,
         };
@@ -210,12 +216,9 @@ impl InflightOperation {
     /// * `dst` - destination register
     /// * `src1_value` - value of the first source register
     /// * `src2_value` - value of the second source register
-    pub fn from_mul(cycle: usize, dst: Reg, src1_value: Value, src2_value: Value) -> Self {
+    pub fn from_mul(cycle: usize, dst: Reg, src1_value: RcExpr, src2_value: RcExpr) -> Self {
         let myself = Self {
-            output: OperationOutput::WriteToRegister(
-                dst,
-                Value(format!("({} * {})", src1_value.0, src2_value.0)),
-            ),
+            output: OperationOutput::WriteToRegister(dst, Expr::mul(src1_value, src2_value)),
             complete_by: cycle + OperationLatency::MUL,
             started_at: cycle,
         };
@@ -246,10 +249,10 @@ mod tests {
 
     #[test]
     fn test_operation_output_equality() {
-        let op1 = OperationOutput::WriteToRegister(Reg(0), Value("1".to_string()));
-        let op2 = OperationOutput::WriteToRegister(Reg(0), Value("2".to_string()));
-        let op3 = OperationOutput::WriteToMemory(Addr(0), Value("3".to_string()));
-        let op4 = OperationOutput::WriteToMemory(Addr(0), Value("3".to_string()));
+        let op1 = OperationOutput::WriteToRegister(Reg(0), Expr::new_const(1));
+        let op2 = OperationOutput::WriteToRegister(Reg(0), Expr::new_const(2));
+        let op3 = OperationOutput::WriteToMemory(Addr(0), Expr::new_const(3));
+        let op4 = OperationOutput::WriteToMemory(Addr(0), Expr::new_const(4));
 
         assert_eq!(op1, op1);
         assert_eq!(op1, op2);
@@ -269,14 +272,11 @@ mod tests {
     #[test]
     fn test_inflight_operation_ordering() {
         let ldi = InflightOperation::from_ldi(0, Reg(0), Const(1));
-        let ldr = InflightOperation::from_ldr(0, Reg(0), Value("1".to_string()));
-        let str = InflightOperation::from_str(0, Value("1".to_string()), Addr(0));
-        let add =
-            InflightOperation::from_add(0, Reg(0), Value("1".to_string()), Value("2".to_string()));
-        let sub =
-            InflightOperation::from_sub(0, Reg(0), Value("1".to_string()), Value("2".to_string()));
-        let mul =
-            InflightOperation::from_mul(0, Reg(0), Value("1".to_string()), Value("2".to_string()));
+        let ldr = InflightOperation::from_ldr(0, Reg(0), Expr::new_const(1));
+        let str = InflightOperation::from_str(0, Expr::new_const(1), Addr(0));
+        let add = InflightOperation::from_add(0, Reg(0), Expr::new_const(1), Expr::new_const(2));
+        let sub = InflightOperation::from_sub(0, Reg(0), Expr::new_const(1), Expr::new_const(2));
+        let mul = InflightOperation::from_mul(0, Reg(0), Expr::new_const(1), Expr::new_const(2));
 
         assert_eq!(ldi, ldi);
         assert_eq!(ldr, ldr);
@@ -311,7 +311,7 @@ mod tests {
         let ldi = InflightOperation::from_ldi(0, Reg(0), Const(1));
         assert_eq!(
             ldi.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), Value("1".to_string()))
+            &OperationOutput::WriteToRegister(Reg(0), Expr::new_const(1))
         );
         assert_eq!(ldi.get_complete_cycle(), OperationLatency::LDI);
         assert_eq!(ldi.get_instruction(), 0);
@@ -319,10 +319,10 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_ldr() {
-        let ldr = InflightOperation::from_ldr(0, Reg(0), Value("1".to_string()));
+        let ldr = InflightOperation::from_ldr(0, Reg(0), Expr::new_const(1));
         assert_eq!(
             ldr.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), Value("1".to_string()))
+            &OperationOutput::WriteToRegister(Reg(0), Expr::new_const(1))
         );
         assert_eq!(ldr.get_complete_cycle(), OperationLatency::LDR);
         assert_eq!(ldr.get_instruction(), 0);
@@ -330,10 +330,10 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_str() {
-        let str_ = InflightOperation::from_str(0, Value("1".to_string()), Addr(0));
+        let str_ = InflightOperation::from_str(0, Expr::new_const(1), Addr(0));
         assert_eq!(
             str_.get_output(),
-            &OperationOutput::WriteToMemory(Addr(0), Value("1".to_string()))
+            &OperationOutput::WriteToMemory(Addr(0), Expr::new_const(1))
         );
         assert_eq!(str_.get_complete_cycle(), OperationLatency::STR);
         assert_eq!(str_.get_instruction(), 0);
@@ -341,36 +341,36 @@ mod tests {
 
     #[test]
     fn test_inflight_operation_add() {
-        let add =
-            InflightOperation::from_add(0, Reg(0), Value("1".to_string()), Value("2".to_string()));
-        assert_eq!(
-            add.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), Value("(2 + 1)".to_string()))
-        );
+        let add = InflightOperation::from_add(0, Reg(0), Expr::new_const(1), Expr::new_const(2));
+        let OperationOutput::WriteToRegister(reg, value) = add.get_output() else {
+            panic!("Expected WriteToRegister, got {:?}", add.get_output());
+        };
+        assert_eq!(reg, &Reg(0));
+        assert_eq!(value.eval(), String::from("(2 + 1)"));
         assert_eq!(add.get_complete_cycle(), OperationLatency::ADD);
         assert_eq!(add.get_instruction(), 0);
     }
 
     #[test]
     fn test_inflight_operation_sub() {
-        let sub =
-            InflightOperation::from_sub(0, Reg(0), Value("1".to_string()), Value("2".to_string()));
-        assert_eq!(
-            sub.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), Value("(1 - 2)".to_string()))
-        );
+        let sub = InflightOperation::from_sub(0, Reg(0), Expr::new_const(1), Expr::new_const(2));
+        let OperationOutput::WriteToRegister(reg, value) = sub.get_output() else {
+            panic!("Expected WriteToRegister, got {:?}", sub.get_output());
+        };
+        assert_eq!(*reg, Reg(0));
+        assert_eq!(value.eval(), String::from("(1 - 2)"));
         assert_eq!(sub.get_complete_cycle(), OperationLatency::SUB);
         assert_eq!(sub.get_instruction(), 0);
     }
 
     #[test]
     fn test_inflight_operation_mul() {
-        let mul =
-            InflightOperation::from_mul(0, Reg(0), Value("1".to_string()), Value("2".to_string()));
-        assert_eq!(
-            mul.get_output(),
-            &OperationOutput::WriteToRegister(Reg(0), Value("(1 * 2)".to_string()))
-        );
+        let mul = InflightOperation::from_mul(0, Reg(0), Expr::new_const(1), Expr::new_const(2));
+        let OperationOutput::WriteToRegister(reg, value) = mul.get_output() else {
+            panic!("Expected WriteToRegister, got {:?}", mul.get_output());
+        };
+        assert_eq!(reg, &Reg(0));
+        assert_eq!(value.eval(), String::from("(1 * 2)"));
         assert_eq!(mul.get_complete_cycle(), OperationLatency::MUL);
         assert_eq!(mul.get_instruction(), 0);
     }

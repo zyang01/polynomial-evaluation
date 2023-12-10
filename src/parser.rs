@@ -3,8 +3,8 @@ use std::{collections::HashMap, fs::read_to_string};
 use log::info;
 
 use crate::pem::{
-    types::{Addr, Const, Reg, Value},
-    Instruction,
+    types::{Addr, Const, Reg},
+    Expr, Instruction, RcExpr,
 };
 
 /// Read startup memory from file
@@ -13,8 +13,8 @@ use crate::pem::{
 /// * `filepath` - path to file containing startup memory
 ///
 /// # Returns
-/// * `HashMap<Addr, Value>` - startup memory
-pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, Value> {
+/// * `HashMap<Addr, RcExpr>` - startup memory
+pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, RcExpr> {
     info!("Reading startup memory from `{filepath}`");
 
     let mut memory = HashMap::new();
@@ -35,8 +35,7 @@ pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, Value> {
             addr.parse::<u32>()
                 .unwrap_or_else(|e| panic!("Invalid memory address {addr} on line {num}: {e}")),
         );
-        let value = Value(value.to_string());
-        memory.insert(addr, value);
+        memory.insert(addr, Expr::new_value(value));
     }
     memory
 }
