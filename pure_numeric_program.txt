@@ -1,0 +1,75 @@
+# This program shows strong eval calculates the final value
+# of the expression (9 * 10) - ((7 + 8) - (6 * 3)) = 93
+
+# cycle 0
+# load 9 to reg 1
+ldi 1 9
+;
+
+# cycle 1
+# load 10 to reg 2
+ldi 2 10
+;
+
+# cycle 2
+# load 6 to reg 3
+ldi 3 6
+# `9 * 10` to reg 1
+mul 1 1 2
+;
+
+# cycle 3
+# load 3 to reg 4
+ldi 4 3
+;
+
+# cycle 4
+# load 7 to reg 5
+ldi 5 7
+# `6 * 3` to reg 3
+mul 3 3 4
+;
+
+# cycle 5
+# load 8 to reg 6
+ldi 6 8
+;
+
+# cycle 6
+# `7 + 8` to reg 5
+add 5 6 5
+;
+
+# cycle 7
+;
+
+# cycle 8
+;
+
+# cycle 9
+;
+
+# cycle 10
+;
+
+# cycle 11
+;
+
+# cycle 12
+;
+
+# cycle 13
+;
+
+# cycle 14
+# `(7 + 8) - (6 * 3)` to reg 3
+sub 3 5 3
+;
+
+# cycle 15
+;
+
+# cycle 16
+# `(9 * 10) - ((7 + 8) - (6 * 3))` to reg 0
+sub 0 1 3
+;

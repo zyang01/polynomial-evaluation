@@ -1,0 +1,39 @@
+# This program shows strong eval will change order of operations
+# after removing parentheses and does not resolve resulting pure
+# numeric operations
+# Weak eval: (1 + (2 + A))
+# Strong eval: 1 + 2 + A
+
+# cycle 0
+# load 1 to reg 1
+ldi 1 1
+# load `A` to reg 3
+ldr 3 0
+;
+
+# cycle 1
+# load 2 to reg 2
+ldi 2 2
+;
+
+# cycle 2
+;
+
+# cycle 3
+;
+
+# cycle 4
+;
+
+# cycle 5
+# `2 + A` to reg 0
+add 0 3 2
+;
+
+# cycle 6
+;
+
+# cycle 7
+# `1 + (2 + A)` to reg 0
+add 0 0 1
+;

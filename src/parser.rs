@@ -146,7 +146,7 @@ pub(crate) fn read_program(filepath: &str) -> Vec<Instruction> {
                 program.push(curr_inst.unwrap());
                 curr_inst = None
             }
-            "#" => continue,
+            "#" | "" => continue,
             _ => panic!("Invalid operation on line {num}: `{op}`"),
         }
     }
