@@ -99,6 +99,9 @@ impl Instruction {
     /// Set `add` instruction to add the values in the source registers and put
     /// the sum in the destination register
     ///
+    /// # Note
+    /// `add dst src1 src2` is evaluated as `dst = src2 + src1`
+    ///
     /// # Arguments
     /// * `dst` - destination register
     /// * `src1` - source register 1

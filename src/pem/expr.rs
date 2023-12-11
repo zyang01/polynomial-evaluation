@@ -3,12 +3,24 @@ use std::{
     rc::Rc,
 };
 
+/// Enum representing the kind of an evaluated expression
+///
+/// # Variants
+/// * `Numeric(u32)` - numeric constant
+/// * `Value(String)` - symbolic variable or a strongly evaluated expression
 #[derive(Debug, Clone)]
 enum EvaluatedExprKind {
     Numeric(u32),
     Value(String),
 }
 
+/// Enum representing the precedence of an evaluated expression tree
+///
+/// # Variants
+/// * `Add` - addition
+/// * `Sub` - subtraction
+/// * `Mul` - multiplication
+/// * `NumericOrSymbolicVariable` - numeric constant or symbolic variable
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     Add,
@@ -17,6 +29,14 @@ enum Precedence {
     NumericOrSymbolicVariable,
 }
 
+/// Enum representing an expression tree
+///
+/// # Variants
+/// * `Const(u32)` - numeric constant
+/// * `SymbolicVariable(String)` - symbolic variable
+/// * `Add(RcExpr, RcExpr)` - addition
+/// * `Sub(RcExpr, RcExpr)` - subtraction
+/// * `Mul(RcExpr, RcExpr)` - multiplication
 #[derive(Debug, Clone)]
 enum Expr {
     Const(u32),
@@ -40,6 +60,11 @@ impl std::fmt::Display for Expr {
 
 type RcExpr = Rc<Expr>;
 
+/// Struct representing an evaluated expression
+///
+/// # Fields
+/// * `kind` - kind of the evaluated expression
+/// * `precedence` - precedence of the evaluated expression
 #[derive(Debug)]
 struct EvaluatedExpr {
     kind: EvaluatedExprKind,
@@ -82,7 +107,8 @@ impl Sub for EvaluatedExpr {
                 precedence: Precedence::NumericOrSymbolicVariable,
             },
             (_, _, Precedence::Add) | (_, _, Precedence::Sub) => Self {
-                // ((A + B) - (C - D)) = A + B - (C - D)
+                // ((Expr) - (C + D)) = Expr - (C + D)
+                // ((Expr) - (C - D)) = Expr - (C - D)
                 kind: EvaluatedExprKind::Value(format!("{} - ({})", self, rhs)),
                 precedence: Precedence::Sub,
             },
@@ -157,6 +183,7 @@ impl From<&str> for EvaluatedExpr {
     }
 }
 
+/// Public wrapper for `Expr`
 #[derive(Debug, Clone)]
 pub(crate) struct ExprWrapper(RcExpr);
 
@@ -201,14 +228,37 @@ impl ExprWrapper {
         Self(Rc::new(expr))
     }
 
+    /// Create a new `ExprWrapper` from a symbolic variable
     pub fn from_symbolic_variable<S: Into<String>>(value: S) -> Self {
         Self::new(Expr::SymbolicVariable(value.into()))
     }
 
+    /// Evaluate the expression tree by simply applying parentheses
+    /// for every operation
+    ///
+    /// # Returns
+    /// * `String` - weakly evaluated expression
     pub fn weak_eval(&self) -> String {
         self.0.to_string()
     }
 
+    /// Evaluate the expression tree by applying parentheses
+    /// only when necessary and resolve operations with only
+    /// numeric operands
+    ///
+    /// # Note
+    /// The evaluated expression does not resolve
+    /// operations with purely numeric operands if they are
+    /// the results of change in operation order by removing
+    /// parentheses, but the evaluated expressions are equivalent
+    /// to their weakly evaluated counterparts.
+    ///
+    /// E.g.
+    /// Weak eval: `1 + (2 - A)`
+    /// Strong eval: `1 + 2 - A` rather than `3 - A`
+    ///
+    /// # Returns
+    /// * `String` - strongly evaluated expression
     pub fn strong_eval(&self) -> String {
         EvaluatedExpr::from(&self.0).to_string()
     }

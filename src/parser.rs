@@ -13,7 +13,7 @@ use crate::pem::{
 /// * `filepath` - path to file containing startup memory
 ///
 /// # Returns
-/// * `HashMap<Addr, RcExpr>` - startup memory
+/// * `HashMap<Addr, ExprWrapper>` - startup memory
 pub(crate) fn read_startup_memory(filepath: &str) -> HashMap<Addr, ExprWrapper> {
     info!("Reading startup memory from `{filepath}`");
 

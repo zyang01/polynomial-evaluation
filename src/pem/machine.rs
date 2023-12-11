@@ -11,6 +11,8 @@ use super::{
 
 const REGISTER_COUNT: usize = 8;
 
+/// Polynomial Evaluation Machine (PEM) with 8 32-bit registers and a 32-bit
+/// addressable memory
 #[derive(Debug)]
 pub(crate) struct Machine {
     /// Registers
@@ -170,9 +172,8 @@ impl Machine {
             })
     }
 
-    /// Begin execution of an instruction by creating an `InflightOperation`
-    /// for each operation in the instruction and reading the values of the
-    /// source registers or memory addresses
+    /// Begin execution of an instruction by reading operands from registers or
+    /// memory, and create an `InflightOperation` for each operation
     ///
     /// # Arguments
     /// * `instruction` - instruction to execute
@@ -241,20 +242,20 @@ impl Machine {
     /// # Returns
     /// * `Ok(())` if the cycle was successfully ended
     /// * `Err(ComputeError::RegisterDataRace)` if two operations wrote to the
-    ///  same register
+    ///   same register and `allow_data_race` is `false`
     /// * `Err(ComputeError::MemoryDataRace)` if two operations wrote to the
-    /// same memory address
+    ///   same memory address and `allow_data_race` is `false`
     ///
     /// # Panics
-    /// * If the `complete_cycle` of an `InflightOperation` is less than the
-    ///  `pc` of the `Machine`
+    /// * If the `complete_by` of an `InflightOperation` is less than or equal
+    ///   to the program counter `pc`
     fn end_cycle(&mut self) -> Result<(), ComputeError> {
         let mut prev: Option<InflightOperation> = None;
         while let Some(next) = self.pending_operations.peek() {
-            let complete_cycle = next.get_complete_cycle();
-            assert!(complete_cycle > self.pc);
+            let complete_by = next.get_complete_by();
+            assert!(complete_by > self.pc);
 
-            if complete_cycle > self.pc + 1 {
+            if complete_by > self.pc + 1 {
                 break;
             }
 
@@ -326,6 +327,39 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_str() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([
+            Instruction::new().with_ldi(Reg(0), Const(1)),
+            Instruction::new().with_str(Reg(0), Addr(0)),
+        ]);
+        let expr = machine.compute(&program).unwrap();
+        assert_eq!(expr.weak_eval(), "1".to_string());
+        assert_eq!(expr.strong_eval(), "1".to_string());
+        machine
+            .get_address_value(&Addr(0))
+            .map(|v| {
+                assert_eq!(v.weak_eval(), "1".to_string());
+            })
+            .expect("Memory address 0 should be initialized");
+        assert_eq!(machine.pc, 6);
+    }
+
+    #[test]
+    fn test_add() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([
+            Instruction::new().with_ldi(Reg(0), Const(1)),
+            Instruction::new().with_ldi(Reg(1), Const(8)),
+            Instruction::new().with_add(Reg(0), Reg(0), Reg(1)),
+        ]);
+        let expr = machine.compute(&program).unwrap();
+        assert_eq!(expr.weak_eval(), "(8 + 1)".to_string());
+        assert_eq!(expr.strong_eval(), "9".to_string());
+        assert_eq!(machine.pc, 4);
+    }
+
+    #[test]
     fn test_sub() {
         let mut machine = Machine::new(HashMap::new());
         let program = Vec::from([
@@ -337,6 +371,20 @@ mod test {
         assert_eq!(expr.weak_eval(), "(8 - 1)".to_string());
         assert_eq!(expr.strong_eval(), "7".to_string());
         assert_eq!(machine.pc, 4);
+    }
+
+    #[test]
+    fn test_mul() {
+        let mut machine = Machine::new(HashMap::new());
+        let program = Vec::from([
+            Instruction::new().with_ldi(Reg(0), Const(2)),
+            Instruction::new().with_ldi(Reg(1), Const(8)),
+            Instruction::new().with_mul(Reg(0), Reg(0), Reg(1)),
+        ]);
+        let expr = machine.compute(&program).unwrap();
+        assert_eq!(expr.weak_eval(), "(2 * 8)".to_string());
+        assert_eq!(expr.strong_eval(), "16".to_string());
+        assert_eq!(machine.pc, 12);
     }
 
     #[test]
