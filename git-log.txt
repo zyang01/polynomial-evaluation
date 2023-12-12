@@ -1,0 +1,247 @@
+commit 45149dd257f3a7fc0e8592b431615e212504f7df
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Tue Dec 12 02:48:14 2023 +0000
+
+    Add README.md
+
+ README.md | 72 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 72 insertions(+)
+
+commit dc5990e91efef9d90398a407ba55709e639526b0
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Mon Dec 11 23:36:12 2023 +0000
+
+    Tests and docs
+
+ src/parser.rs                 |  2 +-
+ src/pem/expr.rs               | 52 ++++++++++++++++++++++++++++++++-
+ src/pem/inflight_operation.rs | 60 +++++++++++++++++++++-----------------
+ src/pem/instruction.rs        |  3 ++
+ src/pem/machine.rs            | 68 ++++++++++++++++++++++++++++++++++++-------
+ 5 files changed, 146 insertions(+), 39 deletions(-)
+
+commit df35b1819bb5ce6b76d01d53ecbe4ee6fb839ed6
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Mon Dec 11 00:19:28 2023 +0000
+
+    Allow empty newline in program file and add more programs
+
+ change_order_program.txt | 39 +++++++++++++++++++++++++
+ long_polynomial.txt      | 30 +++++++++++++++++++
+ pure_numeric_program.txt | 75 ++++++++++++++++++++++++++++++++++++++++++++++++
+ src/parser.rs            |  2 +-
+ 4 files changed, 145 insertions(+), 1 deletion(-)
+
+commit e0d0289bcdd703dd7dc40d97549b0e54cc0be282
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sun Dec 10 22:12:05 2023 +0000
+
+    Add long polynomial test and program
+
+ long_polynomial.txt | 96 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/pem/machine.rs  | 59 ++++++++++++++++++++++++++++++++
+ 2 files changed, 155 insertions(+)
+
+commit a21b6f61d94ab57a88c9de7d3aec38903720f07d
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sun Dec 10 20:42:51 2023 +0000
+
+    Cleanup and test
+
+ src/pem/expr.rs               | 118 +++++++++++++++++++++++++++++++++++-------
+ src/pem/inflight_operation.rs |  38 +++++---------
+ 2 files changed, 114 insertions(+), 42 deletions(-)
+
+commit bb4dc462d11e6823030670f6ad62b72dbcce4bd0
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sun Dec 10 19:55:27 2023 +0000
+
+    Reorg expr
+
+ src/pem/expr.rs | 307 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/pem/mod.rs  | 301 +-----------------------------------------------------
+ 2 files changed, 309 insertions(+), 299 deletions(-)
+
+commit c8e380671ca19ea99bd668a67094bd9e16dc2cbd
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sun Dec 10 19:53:32 2023 +0000
+
+    Implement strong expr eval
+
+ src/main.rs                   |   5 +-
+ src/parser.rs                 |   2 +-
+ src/pem/inflight_operation.rs |  11 +-
+ src/pem/machine.rs            |  23 ++--
+ src/pem/mod.rs                | 276 ++++++++++++++++++++++++++++++++++++------
+ 5 files changed, 261 insertions(+), 56 deletions(-)
+
+commit e27ef0fa0ab6da8071c034bffde20fa7c2b420d2
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sun Dec 10 04:52:03 2023 +0000
+
+    Implement ExprWrapper and eval memoization
+
+ src/parser.rs                 |  6 +--
+ src/pem/inflight_operation.rs | 88 +++++++++++++++++++++++++--------------
+ src/pem/machine.rs            | 32 +++++++--------
+ src/pem/mod.rs                | 96 ++++++++++++++++++++++++++++++++-----------
+ 4 files changed, 146 insertions(+), 76 deletions(-)
+
+commit 06d765efde4e97326aa84e32bc74ff5fb7b0e646
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sun Dec 10 00:43:12 2023 +0000
+
+    Replace types::Value with Expr
+
+ .gitignore                    |   1 +
+ src/main.rs                   |   2 +-
+ src/parser.rs                 |  11 ++--
+ src/pem/inflight_operation.rs | 114 +++++++++++++++++++++---------------------
+ src/pem/machine.rs            |  44 ++++++++--------
+ src/pem/mod.rs                |  52 ++++++++++++++++++-
+ 6 files changed, 137 insertions(+), 87 deletions(-)
+
+commit 6471c49880ebc1c5dc3e46f0bf9bec986d6c1c09
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 21:22:04 2023 +0000
+
+    Format parser log messages
+
+ src/parser.rs | 52 ++++++++++++++++++++++++++--------------------------
+ 1 file changed, 26 insertions(+), 26 deletions(-)
+
+commit 5d10582e0cfa889b1b9fc7c666060a35785e8590
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 21:02:48 2023 +0000
+
+    Add equality testing for OperationOutput
+
+ src/pem/inflight_operation.rs | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+commit a191cda84adfb37f7c4dad40ae4cf4936be76002
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 20:57:47 2023 +0000
+
+    Add more tests and trace logging
+
+ src/pem/inflight_operation.rs | 62 ++++++++++++++++++++++++++++++++++---------
+ src/pem/machine.rs            | 15 +++++++++++
+ 2 files changed, 65 insertions(+), 12 deletions(-)
+
+commit b8a7d636e173817ff92ca78f2157a68a6458f592
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 20:41:15 2023 +0000
+
+    Implement allow data races via env var
+
+ src/main.rs        |  5 +++++
+ src/pem/machine.rs | 22 +++++++++++++++++++---
+ 2 files changed, 24 insertions(+), 3 deletions(-)
+
+commit b6cc18a549a2c1ae9fecea35bad84fbd0cc3e187
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 19:53:33 2023 +0000
+
+    More trace logging and tests for Machine
+
+ src/pem/machine.rs | 66 +++++++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 58 insertions(+), 8 deletions(-)
+
+commit e274abd9b12536cec938355af60ad13058f60fe6
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 19:23:27 2023 +0000
+
+    Add debug and trace logging
+
+ register_data_race_program.txt |  4 ++--
+ src/pem/inflight_operation.rs  | 42 +++++++++++++++++++++---------------------
+ src/pem/instruction.rs         | 34 ++++++++++++++++++++++++++++++++++
+ src/pem/machine.rs             | 40 +++++++++++++++++++++++++++++++++-------
+ src/pem/mod.rs                 | 18 ++++++++++++++++++
+ 5 files changed, 108 insertions(+), 30 deletions(-)
+
+commit c663c212abec1e18793d90ac445a036374a953db
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 18:14:40 2023 +0000
+
+    Add parser
+
+ example_program.txt            |  17 +++++
+ register_data_race_program.txt |   8 +++
+ src/main.rs                    |  76 ++++++--------------
+ src/parser.rs                  | 160 +++++++++++++++++++++++++++++++++++++++++
+ startup_memory.txt             |  26 +++++++
+ 5 files changed, 232 insertions(+), 55 deletions(-)
+
+commit 0b75198e97603f36a913f765db277fac89a9fc0d
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 15:33:55 2023 +0000
+
+    Add tests and cleanup
+
+ Cargo.lock                    | 302 +++++++++++++++++++++++++++++++++++++++++-
+ Cargo.toml                    |   3 +-
+ src/main.rs                   |  36 +++--
+ src/pem/inflight_operation.rs | 125 ++++++++++++++++-
+ src/pem/machine.rs            |  78 ++++++++++-
+ src/pem/mod.rs                |   2 +-
+ 6 files changed, 522 insertions(+), 24 deletions(-)
+
+commit 013a48cc3478039f914c1db79de85327564012da
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 03:50:54 2023 +0000
+
+    Cleanup and call it a night
+
+ src/main.rs    | 10 +++++-----
+ src/pem/mod.rs |  1 +
+ 2 files changed, 6 insertions(+), 5 deletions(-)
+
+commit 61114c672015022416461eae4de333740b75faba
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 03:32:04 2023 +0000
+
+    Implement Machine cycle ending
+
+ src/main.rs                   | 22 ++++++++---
+ src/pem/inflight_operation.rs | 22 ++++++++++-
+ src/pem/machine.rs            | 88 +++++++++++++++++++++++++++++++++++++++----
+ 3 files changed, 118 insertions(+), 14 deletions(-)
+
+commit f66a79f8a22a61189e929c33c8602db3ed71832d
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Sat Dec 9 01:45:40 2023 +0000
+
+    Implement Machine
+
+ src/main.rs                   |  32 +++++--
+ src/pem/inflight_operation.rs | 176 ++++++++++++++++++++++++++++++++++++++
+ src/pem/instruction.rs        |  42 +++++-----
+ src/pem/machine.rs            | 191 ++++++++++++++++++++++++++++++++++++++++++
+ src/pem/mod.rs                |  17 +++-
+ 5 files changed, 424 insertions(+), 34 deletions(-)
+
+commit 3ed05673a6aca38ce2abf2f544403dcdd6371396
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Fri Dec 8 21:21:51 2023 +0000
+
+    Refactor PEM
+
+ src/main.rs                         | 11 +++++++++--
+ src/{pepu.rs => pem/instruction.rs} | 13 ++-----------
+ src/pem/mod.rs                      | 16 ++++++++++++++++
+ 3 files changed, 27 insertions(+), 13 deletions(-)
+
+commit 7e36be96162c31bca3fb44796c06e0d84e5e7e1e
+Author: Aaron Yang <aaron.yang@protonmail.com>
+Date:   Fri Dec 8 19:40:00 2023 +0000
+
+    Add Instruction implementation
+
+ .gitignore  |   1 +
+ Cargo.lock  |  72 +++++++++++++++++++++++++++++++++++++++
+ Cargo.toml  |  10 ++++++
+ src/main.rs |  22 ++++++++++++
+ src/pepu.rs | 109 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 214 insertions(+)
